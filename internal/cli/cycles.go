@@ -28,6 +28,7 @@ func newCyclesCmd() *cobra.Command {
 func newCyclesListCmd() *cobra.Command {
 	var teamID string
 	var activeOnly bool
+	var limit int
 
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -39,6 +40,7 @@ REQUIRED:
 
 OPTIONAL:
 - --active: Filter to only active cycles
+- --limit: Number of cycles to return (default: 25)
 
 TIP: Run 'linear init' to set default team.`,
 		Example: `  # Minimal - list all cycles (requires 'linear init')
@@ -50,11 +52,14 @@ TIP: Run 'linear init' to set default team.`,
   # Only active cycles
   linear cycles list --active
 
-  # Specific team, active only
-  linear cycles list --team CEN --active`,
+  # Specific team, active only, with limit
+  linear cycles list --team CEN --active --limit 10
+
+  # List more cycles
+  linear cycles list --limit 50`,
 		Annotations: map[string]string{
 			"required": "team (via init or --team flag)",
-			"optional": "--active flag",
+			"optional": "--active, --limit flags",
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Use default team if not specified
@@ -70,9 +75,14 @@ TIP: Run 'linear init' to set default team.`,
 				return err
 			}
 
+			// Set default limit if not specified
+			if limit <= 0 {
+				limit = 25
+			}
+
 			filters := &service.CycleFilters{
 				TeamID: teamID,
-				Limit:  25,
+				Limit:  limit,
 				Format: format.Compact,
 			}
 			if activeOnly {
@@ -91,6 +101,7 @@ TIP: Run 'linear init' to set default team.`,
 
 	cmd.Flags().StringVar(&teamID, "team", "", "Team ID or key (uses .linear.yaml default)")
 	cmd.Flags().BoolVar(&activeOnly, "active", false, "Only show active cycles")
+	cmd.Flags().IntVarP(&limit, "limit", "n", 25, "Number of cycles to return (default 25)")
 
 	return cmd
 }
