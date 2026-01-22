@@ -23,7 +23,7 @@ func TestListAllIssues(t *testing.T) {
 			assert.Contains(t, query, "$first: Int!")
 			assert.Contains(t, query, "$after: String")
 			assert.Contains(t, query, "$filter: IssueFilter")
-			assert.Contains(t, query, "$orderBy: IssueOrderBy")
+			assert.Contains(t, query, "$orderBy: PaginationOrderBy")
 			
 			// Check that the query includes all necessary fields
 			assert.Contains(t, query, "nodes {")

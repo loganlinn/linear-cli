@@ -38,41 +38,107 @@ func newIssuesCmd() *cobra.Command {
 
 func newIssuesListCmd() *cobra.Command {
 	var (
-		start     int
+		teamID    string
+		state     string
+		priority  int
+		assignee  string
+		cycle     string
+		labels    string
 		limit     int
-		sort      string
-		direction string
+		formatStr string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List recent issues",
-		Long:  "List recent Linear issues assigned to you with offset-based pagination.",
-		Example: `  # First 10 issues (default)
+		Short: "List all issues (not just assigned)",
+		Long: `List Linear issues with filtering, sorting, and pagination.
+
+IMPORTANT BEHAVIORS:
+- Returns ALL issues by default (not just assigned to you)
+- Requires team context from 'linear init' or --team flag
+- Use filters to narrow results
+- Returns 10 issues by default, use --limit to change
+
+TIP: Use --format full for detailed output, --format minimal for concise output.`,
+		Example: `  # Minimal - list first 10 issues (requires 'linear init')
   linear issues list
 
-  # Items 11-20
-  linear issues list --start 10 --limit 10
+  # Complete - using ALL available parameters
+  linear issues list \
+    --team CEN \
+    --state "In Progress" \
+    --priority 1 \
+    --assignee johannes.zillmann@centrum-ai.com \
+    --cycle 65 \
+    --labels "customer,bug" \
+    --limit 50 \
+    --format full
 
-  # Sort by priority (highest first)
-  linear issues list --sort priority
+  # Common pattern - high priority customer issues
+  linear issues list \
+    --labels customer \
+    --priority 1 \
+    --limit 20
 
-  # Sort by creation date (oldest first)
-  linear issues list --sort created --direction asc`,
+  # Get issues in specific cycle
+  linear issues list --cycle 65 --format full
+
+  # Filter by assignee
+  linear issues list --assignee me
+
+  # Filter by state
+  linear issues list --state Backlog --limit 100`,
+		Annotations: map[string]string{
+			"required": "team (via init or --team flag)",
+			"optional": "all filter/pagination flags",
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Use default team if not specified
+			if teamID == "" {
+				teamID = GetDefaultTeam()
+			}
+			if teamID == "" {
+				return fmt.Errorf("--team is required (or run 'linear init' to set a default)")
+			}
+
 			svc, err := getIssueService()
 			if err != nil {
 				return err
 			}
 
-			pagination := &linear.PaginationInput{
-				Start:     start,
-				Limit:     limit,
-				Sort:      sort,
-				Direction: direction,
+			// Build search filters
+			filters := &service.SearchFilters{
+				TeamID: teamID,
+				Limit:  limit,
 			}
 
-			output, err := svc.ListAssignedWithPagination(pagination)
+			// Apply optional filters
+			if state != "" {
+				filters.StateIDs = []string{state}
+			}
+			if priority > 0 {
+				filters.Priority = &priority
+			}
+			if assignee != "" {
+				filters.AssigneeID = assignee
+			}
+			if cycle != "" {
+				filters.CycleID = cycle
+			}
+			if labels != "" {
+				filters.LabelIDs = parseCommaSeparated(labels)
+			}
+
+			// Set format
+			outputFormat := format.Compact
+			if formatStr == "full" {
+				outputFormat = format.Full
+			} else if formatStr == "minimal" {
+				outputFormat = format.Minimal
+			}
+			filters.Format = outputFormat
+
+			output, err := svc.Search(filters)
 			if err != nil {
 				return fmt.Errorf("failed to list issues: %w", err)
 			}
@@ -82,10 +148,14 @@ func newIssuesListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().IntVar(&start, "start", 0, "Starting position (0-indexed)")
+	cmd.Flags().StringVarP(&teamID, "team", "t", "", "Team ID or key (uses .linear.yaml default)")
+	cmd.Flags().StringVar(&state, "state", "", "Filter by workflow state (e.g., 'In Progress', 'Backlog')")
+	cmd.Flags().IntVar(&priority, "priority", 0, "Filter by priority (0=none, 1=urgent, 2=high, 3=normal, 4=low)")
+	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Filter by assignee (email or 'me')")
+	cmd.Flags().StringVarP(&cycle, "cycle", "c", "", "Filter by cycle (number, 'current', or 'next')")
+	cmd.Flags().StringVarP(&labels, "labels", "l", "", "Filter by labels (comma-separated)")
 	cmd.Flags().IntVarP(&limit, "limit", "n", 10, "Number of items (max 250)")
-	cmd.Flags().StringVar(&sort, "sort", "updated", "Sort by: priority|created|updated")
-	cmd.Flags().StringVar(&direction, "direction", "desc", "Sort direction: asc|desc")
+	cmd.Flags().StringVarP(&formatStr, "format", "f", "compact", "Output format: compact|full|json")
 
 	return cmd
 }
@@ -136,15 +206,51 @@ func newIssuesCreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create <title>",
 		Short: "Create a new issue",
-		Long:  `Create a new issue with the specified title and optional flags.`,
-		Example: `  # Create a simple issue
-  linear issues create "Fix login bug" --team CEN
+		Long: `Create a new issue in Linear.
 
-  # Create with screenshot attachment
+REQUIRED:
+- Title (positional argument)
+- Team context (from 'linear init' or --team flag)
+
+OPTIONAL: All other flags (assignee, priority, labels, etc.)
+
+TIP: Run 'linear init' first to set default team.`,
+		Example: `  # Minimal - create with just title (requires 'linear init')
+  linear issues create "Fix login bug"
+
+  # Complete - using ALL available parameters
+  linear issues create "Implement OAuth" \
+    --team CEN \
+    --project "Auth Revamp" \
+    --parent CEN-100 \
+    --state "In Progress" \
+    --priority 1 \
+    --assignee stefan@centrum-ai.com \
+    --estimate 5 \
+    --cycle 65 \
+    --labels "backend,security" \
+    --blocked-by CEN-99 \
+    --depends-on CEN-98,CEN-97 \
+    --due 2026-02-15 \
+    --attach /tmp/diagram.png \
+    --description "Full OAuth implementation with Google provider"
+
+  # Common pattern - bug fix with assignee
+  linear issues create "Fix null pointer" \
+    --team CEN \
+    --priority 0 \
+    --assignee me \
+    --labels bug
+
+  # With screenshot attachment
   linear issues create "UI Bug" --team CEN --attach /tmp/screenshot.png
 
-  # Create with multiple attachments
+  # With multiple attachments
   linear issues create "Bug report" --team CEN --attach img1.png --attach img2.png`,
+		Annotations: map[string]string{
+			"required": "title, team (via init or --team flag)",
+			"optional": "all other flags",
+		},
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			title := args[0]

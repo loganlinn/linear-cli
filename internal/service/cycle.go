@@ -32,11 +32,22 @@ type CycleFilters struct {
 	Format   format.Format
 }
 
-// Get retrieves a single cycle by ID
-func (s *CycleService) Get(cycleID string, outputFormat format.Format) (string, error) {
-	cycle, err := s.client.GetCycle(cycleID)
+// Get retrieves a single cycle by ID, number, or name
+func (s *CycleService) Get(cycleIDOrNumber string, teamID string, outputFormat format.Format) (string, error) {
+	// Resolve cycle identifier (number/name/UUID) to UUID
+	// teamID is optional - if empty, cycleIDOrNumber must be a UUID
+	resolvedID := cycleIDOrNumber
+	if teamID != "" {
+		var err error
+		resolvedID, err = s.client.ResolveCycleIdentifier(cycleIDOrNumber, teamID)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve cycle '%s': %w", cycleIDOrNumber, err)
+		}
+	}
+
+	cycle, err := s.client.GetCycle(resolvedID)
 	if err != nil {
-		return "", fmt.Errorf("failed to get cycle %s: %w", cycleID, err)
+		return "", fmt.Errorf("failed to get cycle %s: %w", cycleIDOrNumber, err)
 	}
 
 	return s.formatter.Cycle(cycle, outputFormat), nil

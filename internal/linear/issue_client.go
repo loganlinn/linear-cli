@@ -1595,7 +1595,7 @@ func (ic *IssueClient) ListAllIssues(filter *IssueFilter) (*ListAllIssuesResult,
 	}
 
 	const query = `
-		query ListAllIssues($first: Int!, $after: String, $filter: IssueFilter, $orderBy: IssueOrderBy) {
+		query ListAllIssues($first: Int!, $after: String, $filter: IssueFilter, $orderBy: PaginationOrderBy) {
 			issues(first: $first, after: $after, filter: $filter, orderBy: $orderBy) {
 				nodes {
 					id
