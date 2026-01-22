@@ -101,6 +101,14 @@ TIP: Use --format full for detailed output, --format minimal for concise output.
 				return fmt.Errorf("--team is required (or run 'linear init' to set a default)")
 			}
 
+			// Validate limit
+			if limit > 250 {
+				return fmt.Errorf("--limit cannot exceed 250 (Linear API maximum). You specified: %d", limit)
+			}
+			if limit <= 0 {
+				limit = 10 // Default
+			}
+
 			svc, err := getIssueService()
 			if err != nil {
 				return err

@@ -27,22 +27,44 @@ func newProjectsCmd() *cobra.Command {
 
 func newProjectsListCmd() *cobra.Command {
 	var mine bool
+	var teamID string
+	var limit int
 
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List projects",
 		Long:  "List all projects or projects you're involved in.",
+		Example: `  # List all projects
+  linear projects list
+
+  # List projects you're involved in
+  linear projects list --mine
+
+  # List with custom limit
+  linear projects list --limit 50
+
+  # Note: --team flag is for API consistency but filtering by team is not yet supported`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			svc, err := getProjectService()
 			if err != nil {
 				return err
 			}
 
+			// Set default limit
+			if limit <= 0 {
+				limit = 25
+			}
+
+			// Note: teamID flag is accepted for consistency but not yet implemented
+			if teamID != "" {
+				fmt.Println("Warning: Team filtering for projects is not yet implemented. Showing all projects.")
+			}
+
 			var output string
 			if mine {
-				output, err = svc.ListUserProjects(25)
+				output, err = svc.ListUserProjects(limit)
 			} else {
-				output, err = svc.ListAll(25)
+				output, err = svc.ListAll(limit)
 			}
 			if err != nil {
 				return fmt.Errorf("failed to list projects: %w", err)
@@ -54,6 +76,8 @@ func newProjectsListCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&mine, "mine", false, "Only show projects you're involved in")
+	cmd.Flags().StringVarP(&teamID, "team", "t", "", "Team filter (not yet implemented)")
+	cmd.Flags().IntVarP(&limit, "limit", "n", 25, "Number of projects to return")
 
 	return cmd
 }

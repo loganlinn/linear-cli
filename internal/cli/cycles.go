@@ -148,6 +148,26 @@ TIP: Run 'linear init' once to set default team, then use cycle numbers directly
 				teamID = GetDefaultTeam()
 			}
 
+			// Check if cycleID looks like a number and team is missing
+			if teamID == "" {
+				// Check if this looks like a cycle number (all digits)
+				isNumber := true
+				for _, c := range cycleID {
+					if c < '0' || c > '9' {
+						isNumber = false
+						break
+					}
+				}
+				if isNumber {
+					return fmt.Errorf(`team context required for cycle numbers
+
+Run 'linear init' to set default team, or use --team flag:
+  linear cycles get %s --team CEN
+
+Alternatively, use cycle UUID instead of number.`, cycleID)
+				}
+			}
+
 			svc, err := getCycleService()
 			if err != nil {
 				return err
