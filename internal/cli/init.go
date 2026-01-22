@@ -149,9 +149,11 @@ func appendToAgentFile(filename, teamKey string) error {
 		return err
 	}
 
-	// Check if Linear section already exists
-	if strings.Contains(string(existing), "## Linear") {
-		// Already has Linear section, skip
+	// Check if the Linear section with this exact content already exists
+	// Use a unique marker from the generated content to detect duplicates
+	uniqueMarker := "This project uses **Linear** for issue tracking."
+	if strings.Contains(string(existing), uniqueMarker) {
+		// Already has Linear section with content, skip
 		return nil
 	}
 
