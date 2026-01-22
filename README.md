@@ -25,7 +25,7 @@ A **token-efficient** command-line interface for [Linear](https://linear.app).
 ### Homebrew (Recommended)
 
 ```bash
-brew tap joa23/linear-cli
+brew tap joa23/linear-cli https://github.com/joa23/linear-cli
 brew install linear-cli
 ```
 
@@ -34,17 +34,17 @@ brew install linear-cli
 **macOS:**
 ```bash
 # Apple Silicon
-curl -L https://github.com/joa23/linear-cli/releases/latest/download/linear-darwin-arm64 -o linear
+curl -L https://github.com/joa23/linear-cli/releases/latest/download/linear-darwin-arm64.tar.gz | tar -xz
 chmod +x linear
 
 # Intel
-curl -L https://github.com/joa23/linear-cli/releases/latest/download/linear-darwin-amd64 -o linear
+curl -L https://github.com/joa23/linear-cli/releases/latest/download/linear-darwin-amd64.tar.gz | tar -xz
 chmod +x linear
 ```
 
 **Linux:**
 ```bash
-curl -L https://github.com/joa23/linear-cli/releases/latest/download/linear-linux-amd64 -o linear
+curl -L https://github.com/joa23/linear-cli/releases/latest/download/linear-linux-amd64.tar.gz | tar -xz
 chmod +x linear
 ```
 
