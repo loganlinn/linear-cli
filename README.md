@@ -187,7 +187,8 @@ linear issues create "Implement OAuth2 login" \
   --assignee me \
   --estimate 5 \
   --cycle current \
-  --labels "backend,security"
+  --labels "backend,security" \
+  --due 2026-03-31
 
 # Create sub-issue with dependencies
 linear issues create "Add Google OAuth provider" \
@@ -198,14 +199,22 @@ linear issues create "Add Google OAuth provider" \
 
 # Update multiple fields at once
 linear issues update ENG-123 \
+  --title "Updated: OAuth login implementation" \
   --state Done \
   --assignee alice \
   --priority 1 \
-  --labels "urgent,hotfix"
+  --labels "urgent,hotfix" \
+  --due 2026-02-15
 
 # Manage dependencies
 linear issues update ENG-102 --blocked-by ENG-101
 linear issues update ENG-103 --depends-on ENG-100,ENG-101
+
+# File attachments
+linear issues create "UI Bug" --team ENG --attach /tmp/screenshot.png
+linear issues create "Bug report" --team ENG --attach img1.png --attach img2.png
+linear issues update ENG-123 --attach /tmp/additional-context.png
+linear issues comment ENG-123 --body "Here's the screenshot:" --attach /tmp/bug.png
 ```
 
 ### Dependencies
@@ -245,6 +254,7 @@ ENG-100 User Authentication Epic
 
 ```bash
 linear issues comment ENG-123 --body "Fixed!"
+linear issues comment ENG-123 --body "Screenshot attached:" --attach /tmp/fix.png
 linear issues comments ENG-123               # List comments
 linear issues reply ENG-123 <id> --body "Thanks!"
 linear issues react ENG-123 👍               # Add reaction
