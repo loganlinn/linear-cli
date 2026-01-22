@@ -101,12 +101,53 @@ linear issues create "Implement feature" \
 | `Entity not found: Cycle` | Verify team context: run `linear init` |
 | `Unknown type "IssueOrderBy"` | Update CLI to latest version |
 
+### Search & Dependency Management
+
+The `linear search` command is powerful for discovery and dependency management:
+
+#### Finding Blocked Work
+```bash
+# Find ALL issues with blockers (weekly routine to unblock work)
+linear search --has-blockers --team CEN
+
+# Find high-priority blocked work
+linear search --priority 1 --has-blockers --team CEN
+
+# Find what's blocked by a specific bottleneck
+linear search --blocked-by CEN-123
+```
+
+#### Discovering Dependencies
+```bash
+# Find related work by keyword
+linear search "authentication" --team CEN
+
+# Check if work has dependencies
+linear search "OAuth" --has-dependencies --team CEN
+
+# Find complex dependency chains
+linear search --max-depth 5 --team CEN
+
+# Detect circular dependencies (always fix these!)
+linear search --has-circular-deps --team CEN
+```
+
+#### Best Practices
+1. **Weekly unblocking routine**: Run `linear search --has-blockers` to find stuck work
+2. **Before creating issues**: Search first to avoid duplicates
+3. **After creating issues**: Use `/link-deps` skill to establish dependencies
+4. **Sprint planning**: Check `linear deps --team CEN` for work order
+5. **Priority alignment**: Ensure foundation work is prioritized over features it blocks
+
 ### Skills Usage
 
 After running `linear init`, use these skills:
+- `/prd` - Create agent-friendly tickets (searches for existing work first)
+- `/triage` - Prioritize backlog issues (uses search to find blocked work)
 - `/cycle-plan` - Analyze and plan cycles
-- `/triage` - Prioritize backlog issues
+- `/retro` - Generate sprint retrospectives
 - `/deps` - Visualize dependency graphs
+- `/link-deps` - **NEW** Discover and link missing dependencies across backlog
 
 ## CLI Commands
 

@@ -3,7 +3,7 @@ package skills
 
 import "embed"
 
-//go:embed prd/* triage/* cycle-plan/* retro/* deps/*
+//go:embed prd/* triage/* cycle-plan/* retro/* deps/* link-deps/*
 var SkillFiles embed.FS
 
 // SkillInfo describes an available skill
@@ -39,6 +39,11 @@ var AvailableSkills = []SkillInfo{
 		Name:        "deps",
 		Description: "Analyze dependency chains, find blockers and circular dependencies",
 		Dir:         "deps",
+	},
+	{
+		Name:        "link-deps",
+		Description: "Discover and link related issues as dependencies across your backlog",
+		Dir:         "link-deps",
 	},
 }
 

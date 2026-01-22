@@ -36,8 +36,8 @@ func newSearchCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "search [query]",
-		Short: "Search across Linear entities",
-		Long: `Unified search across issues, cycles, projects, and users.
+		Short: "Search across Linear entities with dependency filtering",
+		Long: `Unified search across issues, cycles, projects, and users with powerful dependency filtering.
 
 ENTITY TYPES:
 - issues (default) - Search issues with full filtering
@@ -46,15 +46,49 @@ ENTITY TYPES:
 - users - Search users by name/email
 - all - Search across all entities
 
-DEPENDENCY FILTERS (issues only):
-- --blocked-by <ID> - Find issues blocked by specified issue
-- --blocks <ID> - Find issues that block specified issue
-- --has-blockers - Find issues with any blocking issues
-- --has-dependencies - Find issues that depend on others
-- --has-circular-deps - Find issues in circular dependency chains
-- --max-depth <n> - Filter by max dependency chain depth
+STANDARD FILTERS (issues only):
+- --team <KEY> - Filter by team (uses .linear.yaml default)
+- --state <name> - Filter by workflow state
+- --priority <0-4> - Filter by priority (0=none, 1=urgent, 4=low)
+- --assignee <email> - Filter by assignee
+- --cycle <number> - Filter by cycle
+- --labels <names> - Filter by labels (comma-separated)
 
-TIP: Use --format full for detailed output.`,
+DEPENDENCY FILTERS (issues only):
+These help you discover and manage dependencies across your backlog:
+
+- --blocked-by <ID> - Find issues blocked by a specific issue
+  Example: Find all work blocked by a foundation task
+
+- --blocks <ID> - Find issues that block a specific issue
+  Example: Find all blockers preventing a feature from shipping
+
+- --has-blockers - Find ALL issues with any blockers
+  Example: Discover work that's stuck waiting on other issues
+
+- --has-dependencies - Find issues that depend on others
+  Example: Find complex work with prerequisite tasks
+
+- --has-circular-deps - Find issues in circular dependency chains
+  Example: Detect dependency cycles that prevent any work from completing
+
+- --max-depth <n> - Filter by maximum dependency chain depth
+  Example: Find simple vs complex dependency trees
+
+USE CASES:
+1. Unblock work: Find all blocked issues to prioritize unblocking
+   → linear search --has-blockers --state "Todo" --team ENG
+
+2. Discover hidden dependencies: Find issues that might be related
+   → linear search "authentication" --has-dependencies
+
+3. Clean up cycles: Find and break circular dependencies
+   → linear search --has-circular-deps --team ENG
+
+4. Prioritize foundation work: See what blocks the most issues
+   → linear deps --team ENG  # then check what blocks most work
+
+TIP: Use --format full for detailed output with descriptions.`,
 		Example: `  # Search all issues
   linear search "authentication"
 

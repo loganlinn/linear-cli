@@ -89,9 +89,28 @@ linear issues create "Implement OAuth2 login flow" \
 linear issues update ENG-102 --blocked-by ENG-101
 ```
 
+## Discovering Related Work
+
+Before creating tickets, search for existing related work:
+
+```bash
+# Find existing work on this topic
+linear search "authentication" --team ENG
+
+# Check if dependencies already exist
+linear search "OAuth" --has-dependencies --team ENG
+
+# Look for potential blockers
+linear search "user database" --team ENG
+```
+
+**Pro tip:** Use `/link-deps` skill after creating tickets to discover and establish dependencies.
+
 ## Best Practices
 
 1. **Size tickets appropriately** - Each should be 1-4 hours of focused work
 2. **Include test commands** - Always specify how to verify completion
 3. **Be explicit about scope** - Prevent scope creep with clear boundaries
 4. **Use Labels** - Add `agent-ready` label for tickets ready for AI implementation
+5. **Establish dependencies** - Use `--blocked-by` and `--depends-on` to show work order
+6. **Search first** - Check for existing related issues before creating duplicates

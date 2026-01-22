@@ -111,6 +111,29 @@ linear issues update ENG-102 --blocked-by ENG-101
 linear issues update ENG-102 --blocked-by ""
 ```
 
+## Discovery Commands (NEW)
+
+Use search to discover dependency-related issues:
+
+```bash
+# Find all blocked issues (useful for prioritizing unblocking work)
+linear search --has-blockers --team ENG
+
+# Find issues blocked by a specific issue
+linear search --blocked-by ENG-100
+
+# Find issues blocking a specific issue
+linear search --blocks ENG-100
+
+# Find circular dependencies
+linear search --has-circular-deps --team ENG
+
+# Find complex dependency chains
+linear search --max-depth 5 --team ENG
+```
+
+**Pro tip:** Use `/link-deps` skill to discover and establish missing dependencies across your backlog.
+
 ## Action Recommendations
 
 Based on analysis, recommend:

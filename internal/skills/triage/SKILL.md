@@ -94,6 +94,29 @@ linear issues update ENG-123 --priority 2
 linear issues comment ENG-123 --body "Triaged: Needs unblocking before sprint"
 ```
 
+## Discovery Commands (NEW)
+
+Use search to discover triage-worthy issues:
+
+```bash
+# Find all blocked issues that need attention
+linear search --has-blockers --state "In Progress" --team ENG
+
+# Find high priority work that's blocked
+linear search --priority 1 --has-blockers --team ENG
+
+# Find issues in circular dependencies (always needs fixing)
+linear search --has-circular-deps --team ENG
+
+# Find work blocked by a specific bottleneck
+linear search --blocked-by ENG-100 --team ENG
+
+# Search for stale work by keyword
+linear search "authentication" --state "Backlog" --team ENG
+```
+
+**Pro tip:** Run `linear search --has-blockers --team ENG` weekly to identify and unblock stuck work.
+
 ## Best Practices
 
 1. **Regular cadence** - Triage weekly or bi-weekly

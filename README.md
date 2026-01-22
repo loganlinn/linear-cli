@@ -217,6 +217,48 @@ linear issues update ENG-123 --attach /tmp/additional-context.png
 linear issues comment ENG-123 --body "Here's the screenshot:" --attach /tmp/bug.png
 ```
 
+### Search
+
+Powerful unified search with dependency filtering:
+
+```bash
+# Basic text search
+linear search "authentication"
+
+# Search with standard filters
+linear search --state "In Progress" --priority 1 --team ENG
+
+# Find issues blocked by a specific issue
+linear search --blocked-by ENG-123
+
+# Find all issues with blockers (useful for unblocking work)
+linear search --has-blockers --team ENG
+
+# Find issues in circular dependencies
+linear search --has-circular-deps --team ENG
+
+# Combine text search with dependency filters
+linear search "auth" --has-blockers --priority 1
+
+# Cross-entity search (issues, cycles, projects, users)
+linear search "oauth" --type all
+```
+
+**Dependency Filters:**
+- `--blocked-by <ID>` - Find issues blocked by a specific issue
+- `--blocks <ID>` - Find issues that block a specific issue
+- `--has-blockers` - Find issues with any blockers
+- `--has-dependencies` - Find issues with dependencies
+- `--has-circular-deps` - Find circular dependency chains
+- `--max-depth <n>` - Filter by dependency chain depth
+
+**Entity Types:**
+- `issues` (default) - Full issue filtering
+- `cycles` - Search cycles
+- `projects` - Search projects
+- `users` - Search team members
+- `all` - Cross-entity search
+
 ### Dependencies
 
 Visualize and manage issue dependencies:
@@ -313,6 +355,7 @@ Available skills:
 - `/cycle-plan` - Plan cycles using velocity data
 - `/retro` - Generate sprint retrospective analysis
 - `/deps` - Analyze dependency chains
+- `/link-deps` - Discover and link related issues as dependencies
 
 ## Output Format
 
