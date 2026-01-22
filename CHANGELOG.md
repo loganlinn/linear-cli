@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix: Changed all commands to use `LoadTokenData()` instead of `LoadToken()`
 - Affected commands: `linear init`, `linear auth status`, `linear issues`, `linear onboard`, and all others
 
+**Duplicate Content Prevention**
+- Fixed `linear init` creating duplicate Linear sections in CLAUDE.md and AGENTS.md when run multiple times
+- Changed from checking for "## Linear" header to checking for unique content marker
+- Now properly detects if Linear section already exists before appending
+
 ### Added
 
 **New Skill:**
