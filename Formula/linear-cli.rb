@@ -29,6 +29,11 @@ class LinearCli < Formula
     end
   end
 
+  # This is a binary distribution - no build step required
+  def pour_bottle?
+    true
+  end
+
   def install
     bin.install "linear"
   end
