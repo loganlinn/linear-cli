@@ -109,6 +109,7 @@ Users (alias: u):
 Analysis:
   deps <ID>                    Show dependency graph for issue
   deps --team <KEY>            Show all dependencies for team
+  search [query] [flags]       Unified search with dependency filters
 
 Skills:
   skills list                  List available Claude Code skills
@@ -150,6 +151,7 @@ Configuration:
 
 		// Analysis
 		newDepsCmd(),
+		newSearchCmd(),
 
 		// Skills
 		newSkillsCmd(),

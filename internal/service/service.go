@@ -15,6 +15,7 @@ type Services struct {
 	Cycles   *CycleService
 	Teams    *TeamService
 	Users    *UserService
+	Search   *SearchService
 }
 
 // New creates all services with a shared Linear client and formatter
@@ -27,6 +28,7 @@ func New(client *linear.Client) *Services {
 		Cycles:   NewCycleService(client, formatter),
 		Teams:    NewTeamService(client, formatter),
 		Users:    NewUserService(client, formatter),
+		Search:   NewSearchService(client, formatter),
 	}
 }
 

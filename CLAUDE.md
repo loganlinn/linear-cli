@@ -116,6 +116,59 @@ linear deps ENG-100          # Show deps for issue
 linear deps --team ENG       # Show all deps for team
 ```
 
+### Unified Search with Dependency Filtering
+```bash
+# Basic search across all issues
+linear search "authentication"
+
+# Search with standard filters
+linear search --state "In Progress" --priority 1 --team CEN
+
+# Find issues blocked by a specific issue
+linear search --blocked-by CEN-123
+
+# Find issues that block a specific issue
+linear search --blocks CEN-100
+
+# Find all issues with any blockers
+linear search --has-blockers --team CEN
+
+# Find all issues with dependencies
+linear search --has-dependencies --team CEN
+
+# Find issues in circular dependency chains
+linear search --has-circular-deps --team CEN
+
+# Filter by max dependency depth
+linear search --max-depth 3 --team CEN
+
+# Combine text search with dependency filters
+linear search "auth" --has-blockers --priority 1
+
+# Cross-entity search (issues, cycles, projects, users)
+linear search "oauth" --type all
+
+# Search specific entity types
+linear search "cycle 65" --type cycles
+linear search "auth project" --type projects
+linear search "john" --type users
+```
+
+**Dependency Filter Options:**
+- `--blocked-by <ID>` - Find issues blocked by specified issue
+- `--blocks <ID>` - Find issues that block specified issue
+- `--has-blockers` - Find issues with any blocking issues
+- `--has-dependencies` - Find issues that depend on others
+- `--has-circular-deps` - Find issues in circular dependency chains
+- `--max-depth <n>` - Filter by maximum dependency chain depth
+
+**Entity Types:**
+- `issues` (default) - Search issues with full filtering
+- `cycles` - Search cycles by name/number
+- `projects` - Search projects by name
+- `users` - Search users by name/email
+- `all` - Search across all entity types
+
 ### Skills Management
 ```bash
 linear skills list           # List available skills
