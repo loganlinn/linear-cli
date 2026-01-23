@@ -3,7 +3,7 @@ package skills
 
 import "embed"
 
-//go:embed prd/* triage/* cycle-plan/* retro/* deps/* link-deps/* release/*
+//go:embed prd/* triage/* cycle-plan/* retro/* deps/* link-deps/* linear/*
 var SkillFiles embed.FS
 
 // SkillInfo describes an available skill
@@ -15,6 +15,11 @@ type SkillInfo struct {
 
 // AvailableSkills lists all skills that can be installed
 var AvailableSkills = []SkillInfo{
+	{
+		Name:        "linear",
+		Description: "Complete Linear CLI reference - semantic search, dependencies, cycle analytics",
+		Dir:         "linear",
+	},
 	{
 		Name:        "prd",
 		Description: "Create agent-friendly tickets with PRDs, sub-issues, and success criteria",
@@ -44,11 +49,6 @@ var AvailableSkills = []SkillInfo{
 		Name:        "link-deps",
 		Description: "Discover and link related issues as dependencies across your backlog",
 		Dir:         "link-deps",
-	},
-	{
-		Name:        "release",
-		Description: "Pre-release checklist ensuring CHANGELOG, versions, tests, and docs are updated",
-		Dir:         "release",
 	},
 }
 
