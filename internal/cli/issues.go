@@ -254,7 +254,13 @@ TIP: Run 'linear init' first to set default team.`,
   linear issues create "UI Bug" --team CEN --attach /tmp/screenshot.png
 
   # With multiple attachments
-  linear issues create "Bug report" --team CEN --attach img1.png --attach img2.png`,
+  linear issues create "Bug report" --team CEN --attach img1.png --attach img2.png
+
+  # Pipe description from file (use - for stdin)
+  cat .claude/plans/feature-plan.md | linear issues create "Implementation" --team CEN -d -
+
+  # Pipe PRD into ticket
+  cat prd.md | linear issues create "Feature: OAuth" --team CEN --description -`,
 		Annotations: map[string]string{
 			"required": "title, team (via init or --team flag)",
 			"optional": "all other flags",
@@ -402,7 +408,10 @@ func newIssuesUpdateCmd() *cobra.Command {
   linear issues update CEN-123 --attach /tmp/screenshot.png
 
   # Assign to yourself
-  linear issues update CEN-123 --assignee me`,
+  linear issues update CEN-123 --assignee me
+
+  # Update description from file (use - for stdin)
+  cat updated-spec.md | linear issues update CEN-123 -d -`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			issueID := args[0]

@@ -171,6 +171,53 @@ linear i create "Add OAuth integration" \
 cat spec.md | linear i create "Feature title" --team CEN -d -
 ```
 
+## Piping Support (Powerful!)
+
+**All description and body flags support stdin via `-`:**
+
+```bash
+# Pipe Claude plan into ticket description
+cat .claude/plans/auth-refactor.md | linear i create "Refactor authentication" \
+  --team CEN \
+  --priority 1 \
+  -d -
+
+# Pipe multi-file content
+cat design.md implementation.md | linear i create "Feature implementation" \
+  --team CEN \
+  -d -
+
+# Pipe command output
+gh issue view 123 --json body -q .body | linear i create "Port GH issue" \
+  --team CEN \
+  -d -
+
+# Update issue description from file
+cat updated-spec.md | linear i update CEN-123 -d -
+
+# Add comment from file
+cat findings.md | linear i comment CEN-123 -b -
+
+# Reply to comment with piped content
+cat response.md | linear i reply CEN-123 comment-id -b -
+```
+
+**Common Patterns:**
+
+```bash
+# Claude Code plans → Linear tickets
+cat .claude/plans/*.md | linear i create "Implementation plan" -d -
+
+# PRD → Parent ticket
+cat prd.md | linear i create "Feature: OAuth" --team CEN -d -
+
+# Changelog → Release ticket
+git log --oneline v1.0.0..HEAD | linear i create "v1.1.0 Release" -d -
+
+# Test results → Bug report
+pytest --verbose | linear i create "Test failures" -d -
+```
+
 ## Output Formats (Token Efficiency)
 
 ```bash

@@ -224,6 +224,12 @@ linear issues create "UI Bug" --team ENG --attach /tmp/screenshot.png
 linear issues create "Bug report" --team ENG --attach img1.png --attach img2.png
 linear issues update ENG-123 --attach /tmp/additional-context.png
 linear issues comment ENG-123 --body "Here's the screenshot:" --attach /tmp/bug.png
+
+# Piping content (powerful!)
+cat .claude/plans/feature-plan.md | linear issues create "Implementation plan" --team ENG -d -
+cat prd.md | linear issues create "Feature: OAuth" --team ENG --description -
+cat bug-report.txt | linear issues comment ENG-123 --body -
+cat response.md | linear issues reply ENG-123 comment-id --body -
 ```
 
 ### Search
