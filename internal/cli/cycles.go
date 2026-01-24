@@ -71,7 +71,7 @@ TIP: Run 'linear init' to set default team.`,
 				return errors.New(ErrTeamRequired)
 			}
 
-			svc, err := getCycleService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
@@ -91,7 +91,7 @@ TIP: Run 'linear init' to set default team.`,
 				filters.IsActive = &activeOnly
 			}
 
-			output, err := svc.Search(filters)
+			output, err := deps.Cycles.Search(filters)
 			if err != nil {
 				return fmt.Errorf("failed to list cycles: %w", err)
 			}
@@ -156,12 +156,12 @@ TIP: Run 'linear init' once to set default team, then use cycle numbers directly
 					"Run 'linear init' to set default team, use --team flag, or use cycle UUID instead of number", cycleID)
 			}
 
-			svc, err := getCycleService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
-			output, err := svc.Get(cycleID, teamID, format.Full)
+			output, err := deps.Cycles.Get(cycleID, teamID, format.Full)
 			if err != nil {
 				return fmt.Errorf("failed to get cycle: %w", err)
 			}
@@ -224,7 +224,7 @@ USE THIS BEFORE PLANNING: Always run analyze before planning cycles to understan
 				return errors.New(ErrTeamRequired)
 			}
 
-			svc, err := getCycleService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
@@ -236,7 +236,7 @@ USE THIS BEFORE PLANNING: Always run analyze before planning cycles to understan
 				IncludeRecommendation: true,
 			}
 
-			output, err := svc.Analyze(input)
+			output, err := deps.Cycles.Analyze(input)
 			if err != nil {
 				return fmt.Errorf("failed to analyze cycles: %w", err)
 			}
@@ -251,12 +251,4 @@ USE THIS BEFORE PLANNING: Always run analyze before planning cycles to understan
 	cmd.Flags().StringVar(&assigneeID, "assignee", "", "Filter by assignee ID")
 
 	return cmd
-}
-
-func getCycleService() (*service.CycleService, error) {
-	client, err := getLinearClient()
-	if err != nil {
-		return nil, err
-	}
-	return service.New(client).Cycles, nil
 }

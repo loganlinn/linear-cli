@@ -4,17 +4,18 @@ import (
 	"fmt"
 
 	"github.com/joa23/linear-cli/internal/format"
-	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/cycles"
+	"github.com/joa23/linear-cli/internal/linear/core"
 )
 
 // CycleService handles cycle-related operations
 type CycleService struct {
-	client    *linear.Client
+	client    CycleClientOperations
 	formatter *format.Formatter
 }
 
 // NewCycleService creates a new CycleService
-func NewCycleService(client *linear.Client, formatter *format.Formatter) *CycleService {
+func NewCycleService(client CycleClientOperations, formatter *format.Formatter) *CycleService {
 	return &CycleService{
 		client:    client,
 		formatter: formatter,
@@ -68,13 +69,13 @@ func (s *CycleService) Search(filters *CycleFilters) (string, error) {
 	}
 
 	// Build Linear API filter
-	linearFilters := &linear.CycleFilter{
+	linearFilters := &core.CycleFilter{
 		Limit:    filters.Limit,
 		After:    filters.After,
 		IsActive: filters.IsActive,
 		IsFuture: filters.IsFuture,
 		IsPast:   filters.IsPast,
-		Format:   linear.ResponseFormat(filters.Format),
+		Format:   core.ResponseFormat(filters.Format),
 	}
 
 	// Resolve team identifier if provided
@@ -128,7 +129,7 @@ func (s *CycleService) Create(input *CreateCycleInput) (string, error) {
 		return "", fmt.Errorf("failed to resolve team '%s': %w", input.TeamID, err)
 	}
 
-	linearInput := &linear.CreateCycleInput{
+	linearInput := &core.CreateCycleInput{
 		TeamID:      teamID,
 		Name:        input.Name,
 		Description: input.Description,
@@ -180,11 +181,11 @@ func (s *CycleService) Analyze(input *AnalyzeInput) (string, error) {
 
 	// Get past cycles
 	isPast := true
-	result, err := s.client.ListCycles(&linear.CycleFilter{
+	result, err := s.client.ListCycles(&core.CycleFilter{
 		TeamID: teamID,
 		IsPast: &isPast,
 		Limit:  input.CycleCount,
-		Format: linear.FormatFull,
+		Format: core.FormatFull,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to list cycles: %w", err)
@@ -195,8 +196,8 @@ func (s *CycleService) Analyze(input *AnalyzeInput) (string, error) {
 	}
 
 	// Get full cycle data and filter issues by user if needed
-	var fullCycles []*linear.Cycle
-	userIssuesMap := make(map[string][]linear.Issue)
+	var fullCycles []*core.Cycle
+	userIssuesMap := make(map[string][]core.Issue)
 
 	for _, cycle := range result.Cycles {
 		fullCycle, err := s.client.GetCycle(cycle.ID)
@@ -222,11 +223,11 @@ func (s *CycleService) Analyze(input *AnalyzeInput) (string, error) {
 	}
 
 	// Calculate metrics
-	var analysis *linear.CycleAnalysis
+	var analysis *cycles.CycleAnalysis
 	if assigneeID != "" {
-		analysis = linear.AnalyzeMultipleCycles(fullCycles, userIssuesMap)
+		analysis = cycles.AnalyzeMultipleCycles(fullCycles, userIssuesMap)
 	} else {
-		analysis = linear.AnalyzeMultipleCycles(fullCycles, nil)
+		analysis = cycles.AnalyzeMultipleCycles(fullCycles, nil)
 	}
 
 	// Get team name

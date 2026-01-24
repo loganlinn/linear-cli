@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/joa23/linear-cli/internal/linear"
 	"github.com/dominikbraun/graph"
 	"github.com/spf13/cobra"
 )
@@ -43,19 +42,19 @@ Detects and warns about circular dependencies.`,
   # Show all dependencies for a team
   linear deps --team ENG`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client, err := getLinearClient()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
 			if len(args) > 0 {
 				// Single issue mode
-				return showIssueDeps(client, args[0])
+				return showIssueDeps(deps, args[0])
 			}
 
 			if teamID != "" {
 				// Team mode
-				return showTeamDeps(client, teamID)
+				return showTeamDeps(deps, teamID)
 			}
 
 			return fmt.Errorf("provide an issue ID or use --team to show team dependencies")
@@ -67,8 +66,8 @@ Detects and warns about circular dependencies.`,
 	return cmd
 }
 
-func showIssueDeps(client *linear.Client, issueID string) error {
-	issue, err := client.Issues.GetIssueWithRelations(issueID)
+func showIssueDeps(deps *Dependencies, issueID string) error {
+	issue, err := deps.Client.Issues.GetIssueWithRelations(issueID)
 	if err != nil {
 		return fmt.Errorf("failed to get issue: %w", err)
 	}
@@ -122,8 +121,8 @@ func showIssueDeps(client *linear.Client, issueID string) error {
 	return renderDependencyGraph(issue.Identifier, nodes, edges)
 }
 
-func showTeamDeps(client *linear.Client, teamID string) error {
-	issues, err := client.Issues.GetTeamIssuesWithRelations(teamID, 250)
+func showTeamDeps(deps *Dependencies, teamID string) error {
+	issues, err := deps.Client.Issues.GetTeamIssuesWithRelations(teamID, 250)
 	if err != nil {
 		return fmt.Errorf("failed to get team issues: %w", err)
 	}

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/joa23/linear-cli/internal/format"
 	"github.com/joa23/linear-cli/internal/service"
@@ -126,6 +127,11 @@ TIP: Use --format full for detailed output with descriptions.`,
   # Cross-entity search
   linear search "oauth" --type all`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			deps, err := getDeps(cmd)
+			if err != nil {
+				return err
+			}
+
 			// Parse text query
 			if len(args) > 0 {
 				textQuery = args[0]
@@ -139,7 +145,7 @@ TIP: Use --format full for detailed output with descriptions.`,
 			// Route to appropriate search handler
 			switch entityType {
 			case "issues", "":
-				return searchIssues(IssueSearchOptions{
+				return searchIssues(deps, IssueSearchOptions{
 					TextQuery:   textQuery,
 					Team:        team,
 					State:       state,
@@ -157,13 +163,13 @@ TIP: Use --format full for detailed output with descriptions.`,
 					Format:      formatStr,
 				})
 			case "cycles":
-				return searchCycles(cmd, textQuery, team, limit, formatStr)
+				return searchCycles(deps, textQuery, team, limit, formatStr)
 			case "projects":
-				return searchProjects(cmd, textQuery, limit)
+				return searchProjects(deps, textQuery, limit)
 			case "users":
-				return searchUsers(cmd, textQuery, team, limit)
+				return searchUsers(deps, textQuery, team, limit)
 			case "all":
-				return searchAll(cmd, textQuery, team, limit, formatStr)
+				return searchAll(deps, textQuery, team, limit, formatStr)
 			default:
 				return fmt.Errorf("invalid entity type: %s (must be: issues, cycles, projects, users, all)", entityType)
 			}
@@ -197,14 +203,9 @@ TIP: Use --format full for detailed output with descriptions.`,
 }
 
 // searchIssues searches issues with optional dependency filtering
-func searchIssues(opts IssueSearchOptions) error {
-	// Get search service
-	svc, err := getSearchService()
-	if err != nil {
-		return err
-	}
-
+func searchIssues(deps *Dependencies, opts IssueSearchOptions) error {
 	// Validate limit
+	var err error
 	opts.Limit, err = validateAndNormalizeLimit(opts.Limit)
 	if err != nil {
 		return err
@@ -253,7 +254,7 @@ func searchIssues(opts IssueSearchOptions) error {
 	searchOpts.Format = outputFormat
 
 	// Execute search
-	output, err := svc.Search(searchOpts)
+	output, err := deps.Search.Search(searchOpts)
 	if err != nil {
 		return fmt.Errorf("failed to search issues: %w", err)
 	}
@@ -263,15 +264,11 @@ func searchIssues(opts IssueSearchOptions) error {
 }
 
 // searchCycles searches cycles by name/number
-func searchCycles(cmd *cobra.Command, textQuery, team string, limit int, formatStr string) error {
-	client, err := getLinearClient()
-	if err != nil {
-		return err
-	}
-	svc := service.New(client).Cycles
+func searchCycles(deps *Dependencies, textQuery, team string, limit int, formatStr string) error {
+	
 
 	// Validate limit
-	limit, err = validateAndNormalizeLimit(limit)
+	limit, err := validateAndNormalizeLimit(limit)
 	if err != nil {
 		return err
 	}
@@ -291,7 +288,7 @@ func searchCycles(cmd *cobra.Command, textQuery, team string, limit int, formatS
 		Format: outputFormat,
 	}
 
-	output, err := svc.Search(filters)
+	output, err := deps.Cycles.Search(filters)
 	if err != nil {
 		return fmt.Errorf("failed to search cycles: %w", err)
 	}
@@ -302,20 +299,16 @@ func searchCycles(cmd *cobra.Command, textQuery, team string, limit int, formatS
 
 // searchProjects searches projects by name
 // Note: Uses default project format (no format customization available)
-func searchProjects(cmd *cobra.Command, textQuery string, limit int) error {
-	client, err := getLinearClient()
-	if err != nil {
-		return err
-	}
-	svc := service.New(client).Projects
+func searchProjects(deps *Dependencies, textQuery string, limit int) error {
+	
 
 	// Validate limit
-	limit, err = validateAndNormalizeLimit(limit)
+	limit, err := validateAndNormalizeLimit(limit)
 	if err != nil {
 		return err
 	}
 
-	output, err := svc.ListAll(limit)
+	output, err := deps.Projects.ListAll(limit)
 	if err != nil {
 		return fmt.Errorf("failed to search projects: %w", err)
 	}
@@ -326,15 +319,11 @@ func searchProjects(cmd *cobra.Command, textQuery string, limit int) error {
 
 // searchUsers searches users by name/email
 // Note: Uses default user format (no format customization available)
-func searchUsers(cmd *cobra.Command, textQuery, team string, limit int) error {
-	client, err := getLinearClient()
-	if err != nil {
-		return err
-	}
-	svc := service.New(client).Users
+func searchUsers(deps *Dependencies, textQuery, team string, limit int) error {
+	
 
 	// Validate limit
-	limit, err = validateAndNormalizeLimit(limit)
+	limit, err := validateAndNormalizeLimit(limit)
 	if err != nil {
 		return err
 	}
@@ -345,7 +334,7 @@ func searchUsers(cmd *cobra.Command, textQuery, team string, limit int) error {
 		Limit:  limit,
 	}
 
-	output, err := svc.Search(filters)
+	output, err := deps.Users.Search(filters)
 	if err != nil {
 		return fmt.Errorf("failed to search users: %w", err)
 	}
@@ -355,7 +344,7 @@ func searchUsers(cmd *cobra.Command, textQuery, team string, limit int) error {
 }
 
 // searchAll searches across all entity types
-func searchAll(cmd *cobra.Command, textQuery, team string, limit int, formatStr string) error {
+func searchAll(deps *Dependencies, textQuery, team string, limit int, formatStr string) error {
 	// Search each entity type and combine results
 	fmt.Printf("SEARCH RESULTS: \"%s\"\n", textQuery)
 	fmt.Println(generateSeparator("═", 50))
@@ -365,38 +354,38 @@ func searchAll(cmd *cobra.Command, textQuery, team string, limit int, formatStr 
 	// Search issues
 	fmt.Println("\nISSUES")
 	fmt.Println(generateSeparator("─", 50))
-	if err := searchIssues(IssueSearchOptions{
+	if err := searchIssues(deps, IssueSearchOptions{
 		TextQuery: textQuery,
 		Team:      team,
 		Limit:     limit,
 		Format:    formatStr,
 	}); err != nil {
 		errs = append(errs, fmt.Errorf("issues: %w", err))
-		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to search issues: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to search issues: %v\n", err)
 	}
 
 	// Search cycles
 	fmt.Println("\nCYCLES")
 	fmt.Println(generateSeparator("─", 50))
-	if err := searchCycles(cmd, textQuery, team, limit, formatStr); err != nil {
+	if err := searchCycles(deps, textQuery, team, limit, formatStr); err != nil {
 		errs = append(errs, fmt.Errorf("cycles: %w", err))
-		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to search cycles: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to search cycles: %v\n", err)
 	}
 
 	// Search projects
 	fmt.Println("\nPROJECTS")
 	fmt.Println(generateSeparator("─", 50))
-	if err := searchProjects(cmd, textQuery, limit); err != nil {
+	if err := searchProjects(deps, textQuery, limit); err != nil {
 		errs = append(errs, fmt.Errorf("projects: %w", err))
-		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to search projects: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to search projects: %v\n", err)
 	}
 
 	// Search users
 	fmt.Println("\nUSERS")
 	fmt.Println(generateSeparator("─", 50))
-	if err := searchUsers(cmd, textQuery, team, limit); err != nil {
+	if err := searchUsers(deps, textQuery, team, limit); err != nil {
 		errs = append(errs, fmt.Errorf("users: %w", err))
-		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to search users: %v\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to search users: %v\n", err)
 	}
 
 	// Return error if all searches failed
@@ -406,7 +395,7 @@ func searchAll(cmd *cobra.Command, textQuery, team string, limit int, formatStr 
 
 	// Warn if some searches failed
 	if len(errs) > 0 {
-		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "\nWarning: %d search(es) failed\n", len(errs))
+		_, _ = fmt.Fprintf(os.Stderr, "\nWarning: %d search(es) failed\n", len(errs))
 	}
 
 	return nil
@@ -421,11 +410,3 @@ func generateSeparator(char string, length int) string {
 	return result
 }
 
-// getSearchService retrieves the search service with authenticated client
-func getSearchService() (*service.SearchService, error) {
-	client, err := getLinearClient()
-	if err != nil {
-		return nil, err
-	}
-	return service.New(client).Search, nil
-}

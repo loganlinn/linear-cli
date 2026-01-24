@@ -47,7 +47,7 @@ func newProjectsListCmd() *cobra.Command {
   # List with custom limit
   linear projects list --limit 50`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			svc, err := getProjectService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
@@ -61,7 +61,7 @@ func newProjectsListCmd() *cobra.Command {
 			var output string
 			if mine {
 				// --mine overrides team requirement
-				output, err = svc.ListUserProjects(limit)
+				output, err = deps.Projects.ListUserProjects(limit)
 			} else {
 				// Get team from flag or config
 				if teamID == "" {
@@ -71,7 +71,7 @@ func newProjectsListCmd() *cobra.Command {
 					return errors.New(ErrTeamRequired)
 				}
 
-				output, err = svc.ListByTeam(teamID, limit)
+				output, err = deps.Projects.ListByTeam(teamID, limit)
 			}
 			if err != nil {
 				return fmt.Errorf("failed to list projects: %w", err)
@@ -98,12 +98,12 @@ func newProjectsGetCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			projectID := args[0]
 
-			svc, err := getProjectService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
-			output, err := svc.Get(projectID)
+			output, err := deps.Projects.Get(projectID)
 			if err != nil {
 				return fmt.Errorf("failed to get project: %w", err)
 			}
@@ -139,6 +139,10 @@ func newProjectsCreateCmd() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
+			deps, err := getDeps(cmd)
+			if err != nil {
+				return err
+			}
 
 			// Get team from flag or config
 			if team == "" {
@@ -167,11 +171,7 @@ func newProjectsCreateCmd() *cobra.Command {
 			}
 			if lead != "" {
 				// Resolve lead to user ID
-				userSvc, err := getUserService()
-				if err != nil {
-					return err
-				}
-				leadID, err := userSvc.ResolveByName(lead)
+				leadID, err := deps.Users.ResolveByName(lead)
 				if err != nil {
 					return fmt.Errorf("failed to resolve lead '%s': %w", lead, err)
 				}
@@ -184,12 +184,7 @@ func newProjectsCreateCmd() *cobra.Command {
 				input.EndDate = endDate
 			}
 
-			svc, err := getProjectService()
-			if err != nil {
-				return err
-			}
-
-			output, err := svc.Create(input)
+			output, err := deps.Projects.Create(input)
 			if err != nil {
 				return fmt.Errorf("failed to create project: %w", err)
 			}
@@ -235,6 +230,10 @@ func newProjectsUpdateCmd() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			projectID := args[0]
+			deps, err := getDeps(cmd)
+			if err != nil {
+				return err
+			}
 
 			// Check if any updates provided (stdin counts as description update)
 			hasStdin := hasStdinPipe()
@@ -265,11 +264,7 @@ func newProjectsUpdateCmd() *cobra.Command {
 			}
 			if lead != "" {
 				// Resolve lead to user ID
-				userSvc, err := getUserService()
-				if err != nil {
-					return err
-				}
-				leadID, err := userSvc.ResolveByName(lead)
+				leadID, err := deps.Users.ResolveByName(lead)
 				if err != nil {
 					return fmt.Errorf("failed to resolve lead '%s': %w", lead, err)
 				}
@@ -282,12 +277,7 @@ func newProjectsUpdateCmd() *cobra.Command {
 				input.EndDate = &endDate
 			}
 
-			svc, err := getProjectService()
-			if err != nil {
-				return err
-			}
-
-			output, err := svc.Update(projectID, input)
+			output, err := deps.Projects.Update(projectID, input)
 			if err != nil {
 				return fmt.Errorf("failed to update project: %w", err)
 			}
@@ -306,12 +296,4 @@ func newProjectsUpdateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&endDate, "end-date", "", "Update target end date YYYY-MM-DD")
 
 	return cmd
-}
-
-func getProjectService() (*service.ProjectService, error) {
-	client, err := getLinearClient()
-	if err != nil {
-		return nil, err
-	}
-	return service.New(client).Projects, nil
 }

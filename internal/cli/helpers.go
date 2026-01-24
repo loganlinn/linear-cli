@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -118,4 +119,19 @@ func validateAndNormalizeLimit(limit int) (int, error) {
 func looksLikeCycleNumber(s string) bool {
 	_, err := strconv.Atoi(s)
 	return err == nil
+}
+
+// Context key type for dependencies injection
+type depsKey string
+
+const dependenciesKey depsKey = "dependencies"
+
+// getDeps extracts Dependencies from command context
+// Returns an error if dependencies are not found, which indicates a programming bug
+func getDeps(cmd *cobra.Command) (*Dependencies, error) {
+	deps, ok := cmd.Context().Value(dependenciesKey).(*Dependencies)
+	if !ok {
+		return nil, fmt.Errorf("internal error: dependencies not initialized - this is a bug, please report it at https://github.com/joa23/linear-cli/issues")
+	}
+	return deps, nil
 }

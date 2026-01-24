@@ -6,9 +6,7 @@ import (
 	"strconv"
 
 	"github.com/joa23/linear-cli/internal/format"
-	"github.com/joa23/linear-cli/internal/linear"
 	"github.com/joa23/linear-cli/internal/service"
-	"github.com/joa23/linear-cli/internal/token"
 	"github.com/spf13/cobra"
 )
 
@@ -108,7 +106,7 @@ TIP: Use --format full for detailed output, --format minimal for concise output.
 				return err
 			}
 
-			svc, err := getIssueService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
@@ -145,7 +143,7 @@ TIP: Use --format full for detailed output, --format minimal for concise output.
 			}
 			filters.Format = outputFormat
 
-			output, err := svc.Search(filters)
+			output, err := deps.Issues.Search(filters)
 			if err != nil {
 				return fmt.Errorf("failed to list issues: %w", err)
 			}
@@ -176,12 +174,12 @@ func newIssuesGetCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			issueID := args[0]
 
-			svc, err := getIssueService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
-			output, err := svc.Get(issueID, format.Full)
+			output, err := deps.Issues.Get(issueID, format.Full)
 			if err != nil {
 				return fmt.Errorf("failed to get issue: %w", err)
 			}
@@ -267,6 +265,10 @@ TIP: Run 'linear init' first to set default team.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			title := args[0]
+			deps, err := getDeps(cmd)
+			if err != nil {
+				return err
+			}
 
 			// Get team from flag or config
 			if team == "" {
@@ -284,11 +286,7 @@ TIP: Run 'linear init' first to set default team.`,
 
 			// Upload attachments and append to description
 			if len(attachFiles) > 0 {
-				client, err := getLinearClient()
-				if err != nil {
-					return err
-				}
-				desc, err = uploadAndAppendAttachments(client, desc, attachFiles)
+				desc, err = uploadAndAppendAttachments(deps.Client, desc, attachFiles)
 				if err != nil {
 					return err
 				}
@@ -336,12 +334,7 @@ TIP: Run 'linear init' first to set default team.`,
 				input.BlockedBy = parseCommaSeparated(blockedBy)
 			}
 
-			svc, err := getIssueService()
-			if err != nil {
-				return err
-			}
-
-			output, err := svc.Create(input)
+			output, err := deps.Issues.Create(input)
 			if err != nil {
 				return fmt.Errorf("failed to create issue: %w", err)
 			}
@@ -407,8 +400,12 @@ func newIssuesUpdateCmd() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			issueID := args[0]
+			deps, err := getDeps(cmd)
+			if err != nil {
+				return err
+			}
 
-			// Get team from flag or config (for cycle resolution)
+// Get team from flag or config (for cycle resolution)
 			if team == "" {
 				team = GetDefaultTeam()
 			}
@@ -434,11 +431,7 @@ func newIssuesUpdateCmd() *cobra.Command {
 
 			// Upload attachments and append to description
 			if len(attachFiles) > 0 {
-				client, err := getLinearClient()
-				if err != nil {
-					return err
-				}
-				desc, err = uploadAndAppendAttachments(client, desc, attachFiles)
+				desc, err = uploadAndAppendAttachments(deps.Client, desc, attachFiles)
 				if err != nil {
 					return err
 				}
@@ -498,12 +491,7 @@ func newIssuesUpdateCmd() *cobra.Command {
 				input.TeamID = &team
 			}
 
-			svc, err := getIssueService()
-			if err != nil {
-				return err
-			}
-
-			output, err := svc.Update(issueID, input)
+			output, err := deps.Issues.Update(issueID, input)
 			if err != nil {
 				return fmt.Errorf("failed to update issue: %w", err)
 			}
@@ -556,7 +544,7 @@ func newIssuesCommentCmd() *cobra.Command {
 			issueID := args[0]
 
 			// Get Linear client
-			client, err := getLinearClient()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
@@ -569,7 +557,7 @@ func newIssuesCommentCmd() *cobra.Command {
 
 			// Upload attachments and append to body
 			if len(attachFiles) > 0 {
-				commentBody, err = uploadAndAppendAttachments(client, commentBody, attachFiles)
+				commentBody, err = uploadAndAppendAttachments(deps.Client, commentBody, attachFiles)
 				if err != nil {
 					return err
 				}
@@ -581,13 +569,13 @@ func newIssuesCommentCmd() *cobra.Command {
 
 			// Get the issue first to get its ID (comments need issue ID, not identifier)
 
-			issue, err := client.GetIssue(issueID)
+			issue, err := deps.Client.Issues.GetIssue(issueID)
 			if err != nil {
 				return fmt.Errorf("failed to get issue: %w", err)
 			}
 
 			// Create the comment
-			comment, err := client.Comments.CreateComment(issue.ID, commentBody)
+			comment, err := deps.Client.Comments.CreateComment(issue.ID, commentBody)
 			if err != nil {
 				return fmt.Errorf("failed to create comment: %w", err)
 			}
@@ -614,18 +602,18 @@ func newIssuesCommentsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			issueID := args[0]
 
-			client, err := getLinearClient()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
 			// Resolve issue identifier to get the UUID
-			issue, err := client.GetIssue(issueID)
+			issue, err := deps.Client.Issues.GetIssue(issueID)
 			if err != nil {
 				return fmt.Errorf("failed to get issue: %w", err)
 			}
 
-			comments, err := client.Comments.GetIssueComments(issue.ID)
+			comments, err := deps.Client.Comments.GetIssueComments(issue.ID)
 			if err != nil {
 				return fmt.Errorf("failed to get comments: %w", err)
 			}
@@ -677,6 +665,10 @@ func newIssuesReplyCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			issueID := args[0]
 			commentID := args[1]
+			deps, err := getDeps(cmd)
+			if err != nil {
+				return err
+			}
 
 			// Get body from flag or stdin
 			replyBody, err := getDescriptionFromFlagOrStdin(body)
@@ -686,11 +678,7 @@ func newIssuesReplyCmd() *cobra.Command {
 
 			// Upload attachments and append to body
 			if len(attachFiles) > 0 {
-				client, err := getLinearClient()
-				if err != nil {
-					return err
-				}
-				replyBody, err = uploadAndAppendAttachments(client, replyBody, attachFiles)
+				replyBody, err = uploadAndAppendAttachments(deps.Client, replyBody, attachFiles)
 				if err != nil {
 					return err
 				}
@@ -700,12 +688,7 @@ func newIssuesReplyCmd() *cobra.Command {
 				return fmt.Errorf("reply body is required. Use --body flag or pipe content to stdin")
 			}
 
-			svc, err := getIssueService()
-			if err != nil {
-				return err
-			}
-
-			comment, err := svc.ReplyToComment(issueID, commentID, replyBody)
+			comment, err := deps.Issues.ReplyToComment(issueID, commentID, replyBody)
 			if err != nil {
 				return fmt.Errorf("failed to create reply: %w", err)
 			}
@@ -740,21 +723,21 @@ func newIssuesReactCmd() *cobra.Command {
 			targetID := args[0]
 			emoji := args[1]
 
-			svc, err := getIssueService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
 			// If targetID looks like an issue identifier (e.g., CEN-123), resolve it first
 			if len(targetID) > 0 && targetID[0] >= 'A' && targetID[0] <= 'Z' {
-				resolvedID, err := svc.GetIssueID(targetID)
+				resolvedID, err := deps.Issues.GetIssueID(targetID)
 				if err != nil {
 					return fmt.Errorf("failed to resolve issue: %w", err)
 				}
 				targetID = resolvedID
 			}
 
-			err = svc.AddReaction(targetID, emoji)
+			err = deps.Issues.AddReaction(targetID, emoji)
 			if err != nil {
 				return fmt.Errorf("failed to add reaction: %w", err)
 			}
@@ -773,32 +756,32 @@ func newIssuesDependenciesCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			issueID := args[0]
-			client, err := getLinearClient()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
-			issue, err := client.GetIssue(issueID)
+			issue, err := deps.Client.Issues.GetIssue(issueID)
 			if err != nil {
 				return fmt.Errorf("failed to get issue: %w", err)
 			}
 
 			// Check metadata for dependency info
-			deps := []string{}
+			depIssues := []string{}
 			if metadata, ok := issue.Metadata["dependencies"].([]interface{}); ok {
 				for _, dep := range metadata {
 					if depStr, ok := dep.(string); ok {
-						deps = append(deps, depStr)
+						depIssues = append(depIssues, depStr)
 					}
 				}
 			}
 
-			if len(deps) == 0 {
+			if len(depIssues) == 0 {
 				fmt.Println("none")
 				return nil
 			}
 
-			fmt.Printf("%v\n", deps)
+			fmt.Printf("%v\n", depIssues)
 			return nil
 		},
 	}
@@ -812,39 +795,39 @@ func newIssuesBlockedByCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			issueID := args[0]
-			client, err := getLinearClient()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
-			issue, err := client.GetIssue(issueID)
+			issue, err := deps.Client.Issues.GetIssue(issueID)
 			if err != nil {
 				return fmt.Errorf("failed to get issue: %w", err)
 			}
 
 			// Check if blocked in metadata or description
-			blocked := []string{}
+			blockedIssues := []string{}
 			if blockList, ok := issue.Metadata["blocked_by"].([]interface{}); ok {
 				for _, blocker := range blockList {
 					if blockerStr, ok := blocker.(string); ok {
-						blocked = append(blocked, blockerStr)
+						blockedIssues = append(blockedIssues, blockerStr)
 					}
 				}
 			}
 
 			// Check description for "Blocked by:" mentions
-			if len(blocked) == 0 && issue.Description != "" {
+			if len(blockedIssues) == 0 && issue.Description != "" {
 				// Simple extraction - in practice would be more sophisticated
 				fmt.Println("check description or Linear UI for blocking issues")
 				return nil
 			}
 
-			if len(blocked) == 0 {
+			if len(blockedIssues) == 0 {
 				fmt.Println("none")
 				return nil
 			}
 
-			fmt.Printf("%v\n", blocked)
+			fmt.Printf("%v\n", blockedIssues)
 			return nil
 		},
 	}
@@ -858,59 +841,33 @@ func newIssuesBlockingCmd() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			issueID := args[0]
-			client, err := getLinearClient()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
-			issue, err := client.GetIssue(issueID)
+			issue, err := deps.Client.Issues.GetIssue(issueID)
 			if err != nil {
 				return fmt.Errorf("failed to get issue: %w", err)
 			}
 
 			// Check metadata for blocked issues
-			blocking := []string{}
+			blockingIssues := []string{}
 			if blockList, ok := issue.Metadata["blocking"].([]interface{}); ok {
 				for _, blocked := range blockList {
 					if blockedStr, ok := blocked.(string); ok {
-						blocking = append(blocking, blockedStr)
+						blockingIssues = append(blockingIssues, blockedStr)
 					}
 				}
 			}
 
-			if len(blocking) == 0 {
+			if len(blockingIssues) == 0 {
 				fmt.Println("none")
 				return nil
 			}
 
-			fmt.Printf("%v\n", blocking)
+			fmt.Printf("%v\n", blockingIssues)
 			return nil
 		},
 	}
-}
-
-// getLinearClient retrieves an authenticated Linear client
-func getLinearClient() (*linear.Client, error) {
-	tokenStorage := token.NewStorage(token.GetDefaultTokenPath())
-	exists, _ := tokenStorage.TokenExistsWithError()
-	if !exists {
-		return nil, fmt.Errorf("not authenticated. Run 'linear auth login' to authenticate")
-	}
-
-	tokenData, err := tokenStorage.LoadTokenData()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load token: %w", err)
-	}
-
-	// Use the access token from the structured data
-	return linear.NewClient(tokenData.AccessToken), nil
-}
-
-// getIssueService retrieves the issue service with authenticated client
-func getIssueService() (*service.IssueService, error) {
-	client, err := getLinearClient()
-	if err != nil {
-		return nil, err
-	}
-	return service.New(client).Issues, nil
 }

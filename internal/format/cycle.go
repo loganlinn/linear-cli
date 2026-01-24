@@ -3,11 +3,12 @@ package format
 import (
 	"strings"
 
-	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/core"
+	"github.com/joa23/linear-cli/internal/linear/cycles"
 )
 
 // Cycle formats a single cycle
-func (f *Formatter) Cycle(cycle *linear.Cycle, fmt Format) string {
+func (f *Formatter) Cycle(cycle *core.Cycle, fmt Format) string {
 	if cycle == nil {
 		return ""
 	}
@@ -25,7 +26,7 @@ func (f *Formatter) Cycle(cycle *linear.Cycle, fmt Format) string {
 }
 
 // CycleList formats a list of cycles with optional pagination
-func (f *Formatter) CycleList(cycles []linear.Cycle, fmt Format, page *Pagination) string {
+func (f *Formatter) CycleList(cycles []core.Cycle, fmt Format, page *Pagination) string {
 	if len(cycles) == 0 {
 		return "No cycles found."
 	}
@@ -53,14 +54,14 @@ func (f *Formatter) CycleList(cycles []linear.Cycle, fmt Format, page *Paginatio
 	return b.String()
 }
 
-func (f *Formatter) cycleMinimal(cycle *linear.Cycle) string {
+func (f *Formatter) cycleMinimal(cycle *core.Cycle) string {
 	// Format: Cycle 67 [Active] (Jan 15 - Jan 28)
 	status := cycleStatus(cycle)
 	return fmtSprintf("Cycle %d [%s] (%s - %s)",
 		cycle.Number, status, formatDate(cycle.StartsAt), formatDate(cycle.EndsAt))
 }
 
-func (f *Formatter) cycleCompact(cycle *linear.Cycle) string {
+func (f *Formatter) cycleCompact(cycle *core.Cycle) string {
 	var b strings.Builder
 
 	// Line 1: Cycle name/number and status
@@ -83,7 +84,7 @@ func (f *Formatter) cycleCompact(cycle *linear.Cycle) string {
 	return b.String()
 }
 
-func (f *Formatter) cycleFull(cycle *linear.Cycle) string {
+func (f *Formatter) cycleFull(cycle *core.Cycle) string {
 	var b strings.Builder
 
 	// Header
@@ -154,7 +155,7 @@ func (f *Formatter) cycleFull(cycle *linear.Cycle) string {
 }
 
 // cycleStatus returns a human-readable status for a cycle
-func cycleStatus(cycle *linear.Cycle) string {
+func cycleStatus(cycle *core.Cycle) string {
 	switch {
 	case cycle.IsActive:
 		return "Active"
@@ -172,7 +173,7 @@ func cycleStatus(cycle *linear.Cycle) string {
 }
 
 // CycleAnalysis formats cycle analytics data
-func (f *Formatter) CycleAnalysis(analysis *linear.CycleAnalysis, teamName, assigneeName string, showRecommendation bool) string {
+func (f *Formatter) CycleAnalysis(analysis *cycles.CycleAnalysis, teamName, assigneeName string, showRecommendation bool) string {
 	if analysis == nil {
 		return "No cycle analysis data available."
 	}

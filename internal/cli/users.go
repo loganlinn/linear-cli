@@ -32,7 +32,7 @@ func newUsersListCmd() *cobra.Command {
 		Short: "List users",
 		Long:  "List users in the workspace or a specific team.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			svc, err := getUserService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
@@ -42,7 +42,7 @@ func newUsersListCmd() *cobra.Command {
 				Limit:  50,
 			}
 
-			output, err := svc.Search(filters)
+			output, err := deps.Users.Search(filters)
 			if err != nil {
 				return fmt.Errorf("failed to list users: %w", err)
 			}
@@ -66,12 +66,12 @@ func newUsersGetCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			userID := args[0]
 
-			svc, err := getUserService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
-			output, err := svc.Get(userID)
+			output, err := deps.Users.Get(userID)
 			if err != nil {
 				return fmt.Errorf("failed to get user: %w", err)
 			}
@@ -88,12 +88,12 @@ func newUsersMeCmd() *cobra.Command {
 		Short: "Show current user",
 		Long:  "Display information about the currently authenticated user.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			svc, err := getUserService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
-			output, err := svc.GetViewer()
+			output, err := deps.Users.GetViewer()
 			if err != nil {
 				return fmt.Errorf("failed to get current user: %w", err)
 			}
@@ -102,12 +102,4 @@ func newUsersMeCmd() *cobra.Command {
 			return nil
 		},
 	}
-}
-
-func getUserService() (*service.UserService, error) {
-	client, err := getLinearClient()
-	if err != nil {
-		return nil, err
-	}
-	return service.New(client).Users, nil
 }

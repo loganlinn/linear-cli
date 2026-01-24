@@ -16,6 +16,8 @@ type Services struct {
 	Teams    *TeamService
 	Users    *UserService
 	Search   *SearchService
+
+	client *linear.Client // Store original client for backward compatibility
 }
 
 // New creates all services with a shared Linear client and formatter
@@ -29,10 +31,11 @@ func New(client *linear.Client) *Services {
 		Teams:    NewTeamService(client, formatter),
 		Users:    NewUserService(client, formatter),
 		Search:   NewSearchService(client, formatter),
+		client:   client,
 	}
 }
 
 // Client returns the underlying Linear client for advanced operations
 func (s *Services) Client() *linear.Client {
-	return s.Issues.client
+	return s.client
 }

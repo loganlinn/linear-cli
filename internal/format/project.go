@@ -3,11 +3,11 @@ package format
 import (
 	"strings"
 
-	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/core"
 )
 
 // Project formats a single project
-func (f *Formatter) Project(project *linear.Project) string {
+func (f *Formatter) Project(project *core.Project) string {
 	if project == nil {
 		return ""
 	}
@@ -60,7 +60,7 @@ func (f *Formatter) Project(project *linear.Project) string {
 }
 
 // ProjectList formats a list of projects with optional pagination
-func (f *Formatter) ProjectList(projects []linear.Project, page *Pagination) string {
+func (f *Formatter) ProjectList(projects []core.Project, page *Pagination) string {
 	if len(projects) == 0 {
 		return "No projects found."
 	}
@@ -88,7 +88,7 @@ func (f *Formatter) ProjectList(projects []linear.Project, page *Pagination) str
 	return b.String()
 }
 
-func (f *Formatter) projectCompact(project *linear.Project) string {
+func (f *Formatter) projectCompact(project *core.Project) string {
 	var b strings.Builder
 
 	// Line 1: Name and state

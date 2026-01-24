@@ -1,6 +1,9 @@
 package linear
 
 import (
+	"github.com/joa23/linear-cli/internal/linear/helpers"
+	"github.com/joa23/linear-cli/internal/linear/core"
+
 	"fmt"
 	"strings"
 	"time"
@@ -37,14 +40,14 @@ func NewResolver(client *Client) *Resolver {
 func (r *Resolver) ResolveUser(nameOrEmail string) (string, error) {
 	// Validate input
 	if nameOrEmail == "" {
-		return "", &ValidationError{
+		return "", &core.ValidationError{
 			Field:   "user",
 			Message: "user identifier cannot be empty",
 		}
 	}
 
 	// Check if it's an email
-	if isEmail(nameOrEmail) {
+	if helpers.IsEmail(nameOrEmail) {
 		return r.resolveUserByEmail(nameOrEmail)
 	}
 
@@ -63,8 +66,8 @@ func (r *Resolver) resolveUserByEmail(email string) (string, error) {
 	user, err := r.client.Teams.GetUserByEmail(email)
 	if err != nil {
 		// If not found, return helpful error
-		if IsNotFoundError(err) {
-			return "", &NotFoundError{
+		if core.IsNotFoundError(err) {
+			return "", &core.NotFoundError{
 				ResourceType: "user",
 				ResourceID:   email,
 			}
@@ -96,7 +99,7 @@ func (r *Resolver) resolveUserByName(name string) (string, error) {
 	}
 
 	// Find matching users
-	var matches []User
+	var matches []core.User
 	nameLower := strings.ToLower(name)
 
 	for _, user := range users {
@@ -116,7 +119,7 @@ func (r *Resolver) resolveUserByName(name string) (string, error) {
 
 	// Handle no matches
 	if len(matches) == 0 {
-		return "", &NotFoundError{
+		return "", &core.NotFoundError{
 			ResourceType: "user",
 			ResourceID:   name,
 		}
@@ -130,7 +133,7 @@ func (r *Resolver) resolveUserByName(name string) (string, error) {
 			suggestions = append(suggestions, fmt.Sprintf("%s (%s)", user.Name, user.Email))
 		}
 
-		return "", &ErrorWithGuidance{
+		return "", &helpers.ErrorWithGuidance{
 			Operation: "Resolve user",
 			Reason:    fmt.Sprintf("multiple users match '%s'", name),
 			Guidance: []string{
@@ -144,7 +147,7 @@ linear_update_issue("CEN-123", {assigneeId: "%s"})
 // Or use full name:
 linear_update_issue("CEN-123", {assigneeId: "%s"})`,
 				matches[0].Email, matches[0].Name),
-			OriginalErr: &ValidationError{
+			OriginalErr: &core.ValidationError{
 				Field:  "user",
 				Value:  name,
 				Reason: fmt.Sprintf("ambiguous, matches: %s", strings.Join(suggestions, ", ")),
@@ -171,7 +174,7 @@ linear_update_issue("CEN-123", {assigneeId: "%s"})`,
 func (r *Resolver) ResolveTeam(keyOrName string) (string, error) {
 	// Validate input
 	if keyOrName == "" {
-		return "", &ValidationError{
+		return "", &core.ValidationError{
 			Field:   "team",
 			Message: "team identifier cannot be empty",
 		}
@@ -216,7 +219,7 @@ func (r *Resolver) ResolveTeam(keyOrName string) (string, error) {
 	}
 
 	// No match found
-	return "", &NotFoundError{
+	return "", &core.NotFoundError{
 		ResourceType: "team",
 		ResourceID:   keyOrName,
 	}
@@ -229,15 +232,15 @@ func (r *Resolver) ResolveTeam(keyOrName string) (string, error) {
 func (r *Resolver) ResolveIssue(identifier string) (string, error) {
 	// Validate input
 	if identifier == "" {
-		return "", &ValidationError{
+		return "", &core.ValidationError{
 			Field:   "identifier",
 			Message: "issue identifier cannot be empty",
 		}
 	}
 
 	// Validate format
-	if !isIssueIdentifier(identifier) {
-		return "", &ValidationError{
+	if !helpers.IsIssueIdentifier(identifier) {
+		return "", &core.ValidationError{
 			Field:  "identifier",
 			Value:  identifier,
 			Reason: "must be in format TEAM-NUMBER (e.g., CEN-123)",
@@ -254,8 +257,8 @@ func (r *Resolver) ResolveIssue(identifier string) (string, error) {
 	issue, err := r.client.Issues.GetIssue(identifier)
 	if err != nil {
 		// Check if it's a not found error (null response or 404)
-		if IsNotFoundError(err) {
-			return "", &NotFoundError{
+		if core.IsNotFoundError(err) {
+			return "", &core.NotFoundError{
 				ResourceType: "issue",
 				ResourceID:   identifier,
 			}
@@ -277,14 +280,14 @@ func (r *Resolver) ResolveIssue(identifier string) (string, error) {
 func (r *Resolver) ResolveCycle(numberOrNameOrID string, teamID string) (string, error) {
 	// Validate input
 	if numberOrNameOrID == "" {
-		return "", &ValidationError{
+		return "", &core.ValidationError{
 			Field:   "cycle",
 			Message: "cycle identifier cannot be empty",
 		}
 	}
 
 	if teamID == "" {
-		return "", &ValidationError{
+		return "", &core.ValidationError{
 			Field:   "teamId",
 			Message: "team ID is required for cycle resolution",
 		}
@@ -317,7 +320,7 @@ func (r *Resolver) resolveCycleByNumber(numberStr string, teamID string) (string
 	}
 
 	// Fetch cycles for the team
-	cycles, err := r.client.Cycles.ListCycles(&CycleFilter{
+	cycles, err := r.client.Cycles.ListCycles(&core.CycleFilter{
 		TeamID: teamID,
 		Limit:  100, // Get enough cycles to find the match
 	})
@@ -339,7 +342,7 @@ func (r *Resolver) resolveCycleByNumber(numberStr string, teamID string) (string
 // resolveCycleName resolves a cycle by its name (e.g., "Cycle 67" or "Sprint Planning")
 func (r *Resolver) resolveCycleName(name string, teamID string) (string, error) {
 	// Fetch cycles for the team
-	cycles, err := r.client.Cycles.ListCycles(&CycleFilter{
+	cycles, err := r.client.Cycles.ListCycles(&core.CycleFilter{
 		TeamID: teamID,
 		Limit:  100,
 	})
@@ -348,7 +351,7 @@ func (r *Resolver) resolveCycleName(name string, teamID string) (string, error) 
 	}
 
 	// Find matching cycles by name (case-insensitive)
-	var matches []Cycle
+	var matches []core.Cycle
 	nameLower := strings.ToLower(name)
 
 	for _, cycle := range cycles.Cycles {
@@ -366,7 +369,7 @@ func (r *Resolver) resolveCycleName(name string, teamID string) (string, error) 
 
 	// Handle no matches
 	if len(matches) == 0 {
-		return "", &NotFoundError{
+		return "", &core.NotFoundError{
 			ResourceType: "cycle",
 			ResourceID:   name,
 		}
@@ -380,7 +383,7 @@ func (r *Resolver) resolveCycleName(name string, teamID string) (string, error) 
 			suggestions = append(suggestions, fmt.Sprintf("#%d: %s", cycle.Number, cycle.Name))
 		}
 
-		return "", &ErrorWithGuidance{
+		return "", &helpers.ErrorWithGuidance{
 			Operation: "Resolve cycle",
 			Reason:    fmt.Sprintf("multiple cycles match '%s'", name),
 			Guidance: []string{
@@ -394,7 +397,7 @@ linear_search resource="issues" query={"cycleId":"%d"}
 // Or use full name:
 linear_search resource="issues" query={"cycleId":"%s"}`,
 				matches[0].Number, matches[0].Name),
-			OriginalErr: &ValidationError{
+			OriginalErr: &core.ValidationError{
 				Field:  "cycle",
 				Value:  name,
 				Reason: fmt.Sprintf("ambiguous, matches: %s", strings.Join(suggestions, ", ")),

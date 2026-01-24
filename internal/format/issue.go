@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/core"
 )
 
 // Issue formats a single issue
-func (f *Formatter) Issue(issue *linear.Issue, fmt Format) string {
+func (f *Formatter) Issue(issue *core.Issue, fmt Format) string {
 	if issue == nil {
 		return ""
 	}
@@ -26,7 +26,7 @@ func (f *Formatter) Issue(issue *linear.Issue, fmt Format) string {
 }
 
 // IssueList formats a list of issues with optional pagination
-func (f *Formatter) IssueList(issues []linear.Issue, fmt Format, page *Pagination) string {
+func (f *Formatter) IssueList(issues []core.Issue, fmt Format, page *Pagination) string {
 	if len(issues) == 0 {
 		return "No issues found."
 	}
@@ -78,13 +78,13 @@ func formatPaginationHeader(resource string, page *Pagination) string {
 	return fmtSprintf("%s (%d-%d)\n", resource, start, end)
 }
 
-func (f *Formatter) issueMinimal(issue *linear.Issue) string {
+func (f *Formatter) issueMinimal(issue *core.Issue) string {
 	// Format: CEN-123 [State] Title
 	state := issue.State.Name
 	return fmtSprintf("%s [%s] %s", issue.Identifier, state, truncate(issue.Title, 60))
 }
 
-func (f *Formatter) issueCompact(issue *linear.Issue) string {
+func (f *Formatter) issueCompact(issue *core.Issue) string {
 	var b strings.Builder
 
 	// Line 1: Identifier [State] Title
@@ -139,7 +139,7 @@ func (f *Formatter) issueCompact(issue *linear.Issue) string {
 	return b.String()
 }
 
-func (f *Formatter) issueFull(issue *linear.Issue) string {
+func (f *Formatter) issueFull(issue *core.Issue) string {
 	var b strings.Builder
 
 	// Header

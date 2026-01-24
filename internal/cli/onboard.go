@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/core"
 	"github.com/joa23/linear-cli/internal/token"
 	"github.com/spf13/cobra"
 )
@@ -74,7 +75,7 @@ func runOnboard() error {
 				fmt.Printf("  %s (%s)\n", team.Name, team.Key)
 
 				// Get team members
-				users, err := client.ListUsersWithPagination(&linear.UserFilter{
+				users, err := client.ListUsersWithPagination(&core.UserFilter{
 					TeamID: team.ID,
 					First:  100, // Increased to get more members
 				})

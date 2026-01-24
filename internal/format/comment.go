@@ -3,11 +3,11 @@ package format
 import (
 	"strings"
 
-	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/core"
 )
 
 // Comment formats a single comment
-func (f *Formatter) Comment(comment *linear.Comment) string {
+func (f *Formatter) Comment(comment *core.Comment) string {
 	if comment == nil {
 		return ""
 	}
@@ -37,7 +37,7 @@ func (f *Formatter) Comment(comment *linear.Comment) string {
 }
 
 // CommentList formats a list of comments with optional pagination
-func (f *Formatter) CommentList(comments []linear.Comment, page *Pagination) string {
+func (f *Formatter) CommentList(comments []core.Comment, page *Pagination) string {
 	if len(comments) == 0 {
 		return "No comments found."
 	}
@@ -65,7 +65,7 @@ func (f *Formatter) CommentList(comments []linear.Comment, page *Pagination) str
 	return b.String()
 }
 
-func (f *Formatter) commentCompact(comment *linear.Comment) string {
+func (f *Formatter) commentCompact(comment *core.Comment) string {
 	var b strings.Builder
 
 	// Line 1: Author and date

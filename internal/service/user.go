@@ -4,17 +4,17 @@ import (
 	"fmt"
 
 	"github.com/joa23/linear-cli/internal/format"
-	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/core"
 )
 
 // UserService handles user-related operations
 type UserService struct {
-	client    *linear.Client
+	client    UserClientOperations
 	formatter *format.Formatter
 }
 
 // NewUserService creates a new UserService
-func NewUserService(client *linear.Client, formatter *format.Formatter) *UserService {
+func NewUserService(client UserClientOperations, formatter *format.Formatter) *UserService {
 	return &UserService{
 		client:    client,
 		formatter: formatter,
@@ -47,7 +47,7 @@ func (s *UserService) Get(identifier string) (string, error) {
 		return "", fmt.Errorf("failed to resolve user '%s': %w", identifier, err)
 	}
 
-	user, err := s.client.Teams.GetUser(userID)
+	user, err := s.client.GetUser(userID)
 	if err != nil {
 		return "", fmt.Errorf("failed to get user: %w", err)
 	}
@@ -67,7 +67,7 @@ func (s *UserService) Search(filters *UserFilters) (string, error) {
 	}
 
 	// Build Linear API filter
-	linearFilters := &linear.UserFilter{
+	linearFilters := &core.UserFilter{
 		First:      filters.Limit,
 		After:      filters.After,
 		ActiveOnly: filters.ActiveOnly,

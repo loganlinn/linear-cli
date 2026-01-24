@@ -5,17 +5,17 @@ import (
 
 	"github.com/dominikbraun/graph"
 	"github.com/joa23/linear-cli/internal/format"
-	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/core"
 )
 
 // SearchService handles unified search operations across entities
 type SearchService struct {
-	client    *linear.Client
+	client    SearchClientOperations
 	formatter *format.Formatter
 }
 
 // NewSearchService creates a new SearchService
-func NewSearchService(client *linear.Client, formatter *format.Formatter) *SearchService {
+func NewSearchService(client SearchClientOperations, formatter *format.Formatter) *SearchService {
 	return &SearchService{
 		client:    client,
 		formatter: formatter,
@@ -74,11 +74,11 @@ func (s *SearchService) searchIssues(opts *SearchOptions) (string, error) {
 	}
 
 	// Build standard filters
-	filters := &linear.IssueSearchFilters{
+	filters := &core.IssueSearchFilters{
 		SearchTerm: opts.TextQuery,
 		Limit:      opts.Limit,
 		After:      opts.After,
-		Format:     linear.ResponseFormat(opts.Format),
+		Format:     core.ResponseFormat(opts.Format),
 	}
 
 	// Resolve team identifier if provided
@@ -150,12 +150,12 @@ func (opts *SearchOptions) needsDependencyFiltering() bool {
 }
 
 // filterByDependencies applies relationship-based filters
-func (s *SearchService) filterByDependencies(issues []linear.Issue, opts *SearchOptions) ([]linear.Issue, error) {
-	var filtered []linear.Issue
+func (s *SearchService) filterByDependencies(issues []core.Issue, opts *SearchOptions) ([]core.Issue, error) {
+	var filtered []core.Issue
 
 	for _, issue := range issues {
 		// Fetch full relations for this issue
-		fullIssue, err := s.client.Issues.GetIssueWithRelations(issue.Identifier)
+		fullIssue, err := s.client.GetIssueWithRelations(issue.Identifier)
 		if err != nil {
 			// If we can't fetch relations, skip this issue
 			continue
@@ -206,9 +206,9 @@ func (s *SearchService) filterByDependencies(issues []linear.Issue, opts *Search
 }
 
 // isBlockedBy checks if issue is blocked by the specified blocker
-func (s *SearchService) isBlockedBy(issue *linear.IssueWithRelations, blockerID string) bool {
+func (s *SearchService) isBlockedBy(issue *core.IssueWithRelations, blockerID string) bool {
 	for _, rel := range issue.InverseRelations.Nodes {
-		if rel.Type == linear.RelationBlocks && rel.Issue != nil && rel.Issue.Identifier == blockerID {
+		if rel.Type == core.RelationBlocks && rel.Issue != nil && rel.Issue.Identifier == blockerID {
 			return true
 		}
 	}
@@ -216,9 +216,9 @@ func (s *SearchService) isBlockedBy(issue *linear.IssueWithRelations, blockerID 
 }
 
 // doesBlock checks if issue blocks the specified issue
-func (s *SearchService) doesBlock(issue *linear.IssueWithRelations, blockedID string) bool {
+func (s *SearchService) doesBlock(issue *core.IssueWithRelations, blockedID string) bool {
 	for _, rel := range issue.Relations.Nodes {
-		if rel.Type == linear.RelationBlocks && rel.RelatedIssue != nil && rel.RelatedIssue.Identifier == blockedID {
+		if rel.Type == core.RelationBlocks && rel.RelatedIssue != nil && rel.RelatedIssue.Identifier == blockedID {
 			return true
 		}
 	}
@@ -226,9 +226,9 @@ func (s *SearchService) doesBlock(issue *linear.IssueWithRelations, blockedID st
 }
 
 // hasAnyBlockers checks if issue has any blocking issues
-func (s *SearchService) hasAnyBlockers(issue *linear.IssueWithRelations) bool {
+func (s *SearchService) hasAnyBlockers(issue *core.IssueWithRelations) bool {
 	for _, rel := range issue.InverseRelations.Nodes {
-		if rel.Type == linear.RelationBlocks {
+		if rel.Type == core.RelationBlocks {
 			return true
 		}
 	}
@@ -236,9 +236,9 @@ func (s *SearchService) hasAnyBlockers(issue *linear.IssueWithRelations) bool {
 }
 
 // hasAnyDependencies checks if issue depends on any other issues
-func (s *SearchService) hasAnyDependencies(issue *linear.IssueWithRelations) bool {
+func (s *SearchService) hasAnyDependencies(issue *core.IssueWithRelations) bool {
 	for _, rel := range issue.Relations.Nodes {
-		if rel.Type == linear.RelationBlocks {
+		if rel.Type == core.RelationBlocks {
 			return true
 		}
 	}
@@ -246,7 +246,7 @@ func (s *SearchService) hasAnyDependencies(issue *linear.IssueWithRelations) boo
 }
 
 // hasCircularDep checks if issue is part of a circular dependency chain
-func (s *SearchService) hasCircularDep(issue *linear.IssueWithRelations) bool {
+func (s *SearchService) hasCircularDep(issue *core.IssueWithRelations) bool {
 	// Build a graph from this issue's relations
 	nodes := make(map[string]bool)
 	var edges []depEdge
@@ -256,7 +256,7 @@ func (s *SearchService) hasCircularDep(issue *linear.IssueWithRelations) bool {
 
 	// Add outgoing relations (what this blocks)
 	for _, rel := range issue.Relations.Nodes {
-		if rel.Type == linear.RelationBlocks && rel.RelatedIssue != nil {
+		if rel.Type == core.RelationBlocks && rel.RelatedIssue != nil {
 			nodes[rel.RelatedIssue.Identifier] = true
 			edges = append(edges, depEdge{
 				from: issue.Identifier,
@@ -267,7 +267,7 @@ func (s *SearchService) hasCircularDep(issue *linear.IssueWithRelations) bool {
 
 	// Add incoming relations (what blocks this)
 	for _, rel := range issue.InverseRelations.Nodes {
-		if rel.Type == linear.RelationBlocks && rel.Issue != nil {
+		if rel.Type == core.RelationBlocks && rel.Issue != nil {
 			nodes[rel.Issue.Identifier] = true
 			edges = append(edges, depEdge{
 				from: rel.Issue.Identifier,
@@ -292,7 +292,7 @@ func (s *SearchService) hasCircularDep(issue *linear.IssueWithRelations) bool {
 }
 
 // getDepChainDepth calculates the maximum dependency chain depth
-func (s *SearchService) getDepChainDepth(issue *linear.IssueWithRelations) int {
+func (s *SearchService) getDepChainDepth(issue *core.IssueWithRelations) int {
 	visited := make(map[string]bool)
 	return s.calculateDepth(issue.Identifier, visited, 0)
 }
@@ -305,14 +305,14 @@ func (s *SearchService) calculateDepth(issueID string, visited map[string]bool, 
 	visited[issueID] = true
 
 	// Get issue with relations
-	fullIssue, err := s.client.Issues.GetIssueWithRelations(issueID)
+	fullIssue, err := s.client.GetIssueWithRelations(issueID)
 	if err != nil {
 		return currentDepth
 	}
 
 	maxDepth := currentDepth
 	for _, rel := range fullIssue.Relations.Nodes {
-		if rel.Type == linear.RelationBlocks && rel.RelatedIssue != nil {
+		if rel.Type == core.RelationBlocks && rel.RelatedIssue != nil {
 			depth := s.calculateDepth(rel.RelatedIssue.Identifier, visited, currentDepth+1)
 			if depth > maxDepth {
 				maxDepth = depth

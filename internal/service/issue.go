@@ -5,17 +5,18 @@ import (
 	"sort"
 
 	"github.com/joa23/linear-cli/internal/format"
-	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/helpers"
+	"github.com/joa23/linear-cli/internal/linear/core"
 )
 
 // IssueService handles issue-related operations
 type IssueService struct {
-	client    *linear.Client
+	client    IssueClientOperations
 	formatter *format.Formatter
 }
 
 // NewIssueService creates a new IssueService
-func NewIssueService(client *linear.Client, formatter *format.Formatter) *IssueService {
+func NewIssueService(client IssueClientOperations, formatter *format.Formatter) *IssueService {
 	return &IssueService{
 		client:    client,
 		formatter: formatter,
@@ -61,10 +62,10 @@ func (s *IssueService) Search(filters *SearchFilters) (string, error) {
 	}
 
 	// Build Linear API filter
-	linearFilters := &linear.IssueSearchFilters{
+	linearFilters := &core.IssueSearchFilters{
 		Limit:  filters.Limit,
 		After:  filters.After,
-		Format: linear.ResponseFormat(filters.Format),
+		Format: core.ResponseFormat(filters.Format),
 	}
 
 	// Resolve team identifier if provided
@@ -124,7 +125,7 @@ func (s *IssueService) ListAssigned(limit int, outputFormat format.Format) (stri
 		limit = 10
 	}
 
-	issues, err := s.client.Issues.ListAssignedIssues(limit)
+	issues, err := s.client.ListAssignedIssues(limit)
 	if err != nil {
 		return "", fmt.Errorf("failed to list assigned issues: %w", err)
 	}
@@ -133,9 +134,9 @@ func (s *IssueService) ListAssigned(limit int, outputFormat format.Format) (stri
 }
 
 // ListAssignedWithPagination lists assigned issues with offset-based pagination
-func (s *IssueService) ListAssignedWithPagination(pagination *linear.PaginationInput) (string, error) {
+func (s *IssueService) ListAssignedWithPagination(pagination *core.PaginationInput) (string, error) {
 	// Validate and normalize pagination
-	pagination = linear.ValidatePagination(pagination)
+	pagination = helpers.ValidatePagination(pagination)
 
 	// Get viewer ID
 	viewer, err := s.client.GetViewer()
@@ -144,7 +145,7 @@ func (s *IssueService) ListAssignedWithPagination(pagination *linear.PaginationI
 	}
 
 	// Build filter - fetch enough to cover offset + page
-	filter := &linear.IssueFilter{
+	filter := &core.IssueFilter{
 		AssigneeID: viewer.ID,
 		First:      pagination.Start + pagination.Limit, // Fetch enough to skip to offset
 	}
@@ -152,13 +153,13 @@ func (s *IssueService) ListAssignedWithPagination(pagination *linear.PaginationI
 	// Use API-level sorting if supported (createdAt, updatedAt)
 	// Note: Linear's orderBy doesn't support direction, always returns desc
 	// For priority or asc direction, we'll do client-side sorting
-	orderBy := linear.MapSortField(pagination.Sort)
+	orderBy := helpers.MapSortField(pagination.Sort)
 	if orderBy != "" && pagination.Direction == "desc" {
 		filter.OrderBy = orderBy
 	}
 
 	// Execute query
-	result, err := s.client.Issues.ListAllIssues(filter)
+	result, err := s.client.ListAllIssues(filter)
 	if err != nil {
 		return "", fmt.Errorf("failed to list assigned issues: %w", err)
 	}
@@ -198,11 +199,11 @@ func (s *IssueService) ListAssignedWithPagination(pagination *linear.PaginationI
 }
 
 // convertIssueDetails converts IssueWithDetails to Issue for formatting
-func convertIssueDetails(details []linear.IssueWithDetails) []linear.Issue {
-	issues := make([]linear.Issue, len(details))
+func convertIssueDetails(details []core.IssueWithDetails) []core.Issue {
+	issues := make([]core.Issue, len(details))
 	for i, d := range details {
 		priority := d.Priority
-		issues[i] = linear.Issue{
+		issues[i] = core.Issue{
 			ID:          d.ID,
 			Identifier:  d.Identifier,
 			Title:       d.Title,
@@ -221,7 +222,7 @@ func convertIssueDetails(details []linear.IssueWithDetails) []linear.Issue {
 }
 
 // sortIssues sorts issues by the specified field and direction
-func sortIssues(issues []linear.IssueWithDetails, sortBy, direction string) {
+func sortIssues(issues []core.IssueWithDetails, sortBy, direction string) {
 	sort.Slice(issues, func(i, j int) bool {
 		var less bool
 		switch sortBy {
@@ -282,7 +283,7 @@ func (s *IssueService) Create(input *CreateIssueInput) (string, error) {
 	}
 
 	// Update with additional fields if provided
-	updateInput := linear.UpdateIssueInput{}
+	updateInput := core.UpdateIssueInput{}
 	needsUpdate := false
 
 	if input.StateID != "" {
@@ -395,7 +396,7 @@ func (s *IssueService) Update(identifier string, input *UpdateIssueInput) (strin
 	}
 
 	// Build update input
-	linearInput := linear.UpdateIssueInput{
+	linearInput := core.UpdateIssueInput{
 		Title:       input.Title,
 		Description: input.Description,
 		Priority:    input.Priority,
@@ -536,7 +537,7 @@ func (s *IssueService) AddComment(identifier, body string) (string, error) {
 		return "", fmt.Errorf("failed to get issue %s: %w", identifier, err)
 	}
 
-	comment, err := s.client.Comments.CreateComment(issue.ID, body)
+	comment, err := s.client.CreateComment(issue.ID, body)
 	if err != nil {
 		return "", fmt.Errorf("failed to create comment: %w", err)
 	}
@@ -545,13 +546,13 @@ func (s *IssueService) AddComment(identifier, body string) (string, error) {
 }
 
 // ReplyToComment replies to an existing comment
-func (s *IssueService) ReplyToComment(issueIdentifier, parentCommentID, body string) (*linear.Comment, error) {
+func (s *IssueService) ReplyToComment(issueIdentifier, parentCommentID, body string) (*core.Comment, error) {
 	issue, err := s.client.GetIssue(issueIdentifier)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get issue %s: %w", issueIdentifier, err)
 	}
 
-	comment, err := s.client.Comments.CreateCommentReply(issue.ID, parentCommentID, body)
+	comment, err := s.client.CreateCommentReply(issue.ID, parentCommentID, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create reply: %w", err)
 	}
@@ -561,7 +562,7 @@ func (s *IssueService) ReplyToComment(issueIdentifier, parentCommentID, body str
 
 // AddReaction adds a reaction to an issue or comment
 func (s *IssueService) AddReaction(targetID, emoji string) error {
-	return s.client.Comments.AddReaction(targetID, emoji)
+	return s.client.AddReaction(targetID, emoji)
 }
 
 // GetIssueID resolves an issue identifier to its UUID
@@ -593,7 +594,7 @@ func extractTeamKeyFromIdentifier(identifier string) string {
 // resolveStateID resolves a state name to a valid state ID
 func (s *IssueService) resolveStateID(stateName, teamID string) (string, error) {
 	// Always resolve by name - no UUID support
-	state, err := s.client.Workflows.GetWorkflowStateByName(teamID, stateName)
+	state, err := s.client.GetWorkflowStateByName(teamID, stateName)
 	if err != nil {
 		return "", fmt.Errorf("state '%s' not found in team workflow: %w", stateName, err)
 	}

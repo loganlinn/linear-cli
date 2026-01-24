@@ -3,11 +3,11 @@ package format
 import (
 	"strings"
 
-	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/core"
 )
 
 // Team formats a single team
-func (f *Formatter) Team(team *linear.Team) string {
+func (f *Formatter) Team(team *core.Team) string {
 	if team == nil {
 		return ""
 	}
@@ -45,7 +45,7 @@ func (f *Formatter) Team(team *linear.Team) string {
 }
 
 // TeamList formats a list of teams with optional pagination
-func (f *Formatter) TeamList(teams []linear.Team, page *Pagination) string {
+func (f *Formatter) TeamList(teams []core.Team, page *Pagination) string {
 	if len(teams) == 0 {
 		return "No teams found."
 	}
@@ -73,7 +73,7 @@ func (f *Formatter) TeamList(teams []linear.Team, page *Pagination) string {
 	return b.String()
 }
 
-func (f *Formatter) teamCompact(team *linear.Team) string {
+func (f *Formatter) teamCompact(team *core.Team) string {
 	var b strings.Builder
 
 	// Line 1: Name and key

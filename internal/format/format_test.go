@@ -4,7 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/core"
+	"github.com/joa23/linear-cli/internal/linear/cycles"
 )
 
 func TestParseFormat(t *testing.T) {
@@ -42,7 +43,7 @@ func TestFormatter_Issue(t *testing.T) {
 	estimate := 3.0
 	dueDate := "2025-01-20"
 
-	issue := &linear.Issue{
+	issue := &core.Issue{
 		ID:         "uuid-123",
 		Identifier: "CEN-123",
 		Title:      "Add login functionality",
@@ -50,12 +51,12 @@ func TestFormatter_Issue(t *testing.T) {
 			ID   string `json:"id"`
 			Name string `json:"name"`
 		}{Name: "In Progress"},
-		Assignee: &linear.User{Name: "Stefan", Email: "stefan@test.com"},
+		Assignee: &core.User{Name: "Stefan", Email: "stefan@test.com"},
 		Priority: &priority,
 		Estimate: &estimate,
 		DueDate:  &dueDate,
-		Project:  &linear.Project{Name: "Auth System"},
-		Cycle:    &linear.CycleReference{Number: 67, Name: "Cycle 67"},
+		Project:  &core.Project{Name: "Auth System"},
+		Cycle:    &core.CycleReference{Number: 67, Name: "Cycle 67"},
 	}
 
 	t.Run("minimal format", func(t *testing.T) {
@@ -117,7 +118,7 @@ func TestFormatter_Issue(t *testing.T) {
 func TestFormatter_IssueList(t *testing.T) {
 	f := New()
 
-	issues := []linear.Issue{
+	issues := []core.Issue{
 		{
 			Identifier: "CEN-1",
 			Title:      "First issue",
@@ -144,7 +145,7 @@ func TestFormatter_IssueList(t *testing.T) {
 	})
 
 	t.Run("empty list", func(t *testing.T) {
-		result := f.IssueList([]linear.Issue{}, Minimal, nil)
+		result := f.IssueList([]core.Issue{}, Minimal, nil)
 		if result != "No issues found." {
 			t.Errorf("expected 'No issues found.', got '%s'", result)
 		}
@@ -173,7 +174,7 @@ func TestFormatter_IssueList(t *testing.T) {
 func TestFormatter_Cycle(t *testing.T) {
 	f := New()
 
-	cycle := &linear.Cycle{
+	cycle := &core.Cycle{
 		ID:       "uuid-cycle",
 		Name:     "Sprint 67",
 		Number:   67,
@@ -181,7 +182,7 @@ func TestFormatter_Cycle(t *testing.T) {
 		EndsAt:   "2025-01-28T00:00:00Z",
 		Progress: 0.45,
 		IsActive: true,
-		Team:     &linear.Team{Name: "Engineering", Key: "ENG"},
+		Team:     &core.Team{Name: "Engineering", Key: "ENG"},
 	}
 
 	t.Run("minimal format", func(t *testing.T) {
@@ -221,7 +222,7 @@ func TestFormatter_Cycle(t *testing.T) {
 func TestFormatter_Project(t *testing.T) {
 	f := New()
 
-	project := &linear.Project{
+	project := &core.Project{
 		Name:        "Auth System",
 		Description: "Authentication and authorization",
 		State:       "started",
@@ -253,7 +254,7 @@ func TestFormatter_Project(t *testing.T) {
 func TestFormatter_Team(t *testing.T) {
 	f := New()
 
-	team := &linear.Team{
+	team := &core.Team{
 		Name:                "Engineering",
 		Key:                 "ENG",
 		Description:         "Core engineering team",
@@ -277,14 +278,14 @@ func TestFormatter_Team(t *testing.T) {
 func TestFormatter_User(t *testing.T) {
 	f := New()
 
-	user := &linear.User{
+	user := &core.User{
 		Name:        "Stefan",
 		DisplayName: "Stefan M",
 		Email:       "stefan@test.com",
 		Active:      true,
 		Admin:       true,
 		CreatedAt:   "2024-01-01T00:00:00Z",
-		Teams: []linear.Team{
+		Teams: []core.Team{
 			{Name: "Engineering", Key: "ENG"},
 		},
 	}
@@ -309,12 +310,12 @@ func TestFormatter_User(t *testing.T) {
 func TestFormatter_Comment(t *testing.T) {
 	f := New()
 
-	comment := &linear.Comment{
+	comment := &core.Comment{
 		ID:        "comment-1",
 		Body:      "This is a comment body",
 		CreatedAt: "2025-01-15T10:30:00Z",
-		User:      linear.User{Name: "Stefan"},
-		Issue: linear.CommentIssue{
+		User:      core.User{Name: "Stefan"},
+		Issue: core.CommentIssue{
 			Identifier: "CEN-123",
 			Title:      "Test issue",
 		},
@@ -407,7 +408,7 @@ func TestUtilityFunctions(t *testing.T) {
 func TestFormatter_CycleAnalysis(t *testing.T) {
 	f := New()
 
-	analysis := &linear.CycleAnalysis{
+	analysis := &cycles.CycleAnalysis{
 		CycleCount:          10,
 		AvgVelocity:         25.5,
 		AvgCompletionRate:   85.0,
@@ -453,7 +454,7 @@ func TestFormatter_CycleAnalysis(t *testing.T) {
 func TestFormatter_CycleList(t *testing.T) {
 	f := New()
 
-	cycles := []linear.Cycle{
+	cycles := []core.Cycle{
 		{
 			Number:   67,
 			Name:     "Sprint 67",
@@ -484,7 +485,7 @@ func TestFormatter_CycleList(t *testing.T) {
 	})
 
 	t.Run("empty list", func(t *testing.T) {
-		result := f.CycleList([]linear.Cycle{}, Compact, nil)
+		result := f.CycleList([]core.Cycle{}, Compact, nil)
 		if result != "No cycles found." {
 			t.Errorf("expected 'No cycles found.', got '%s'", result)
 		}
@@ -494,7 +495,7 @@ func TestFormatter_CycleList(t *testing.T) {
 func TestFormatter_ProjectList(t *testing.T) {
 	f := New()
 
-	projects := []linear.Project{
+	projects := []core.Project{
 		{Name: "Project A", State: "started"},
 		{Name: "Project B", State: "completed"},
 	}
@@ -510,7 +511,7 @@ func TestFormatter_ProjectList(t *testing.T) {
 	})
 
 	t.Run("empty list", func(t *testing.T) {
-		result := f.ProjectList([]linear.Project{}, nil)
+		result := f.ProjectList([]core.Project{}, nil)
 		if result != "No projects found." {
 			t.Errorf("expected 'No projects found.', got '%s'", result)
 		}
@@ -520,7 +521,7 @@ func TestFormatter_ProjectList(t *testing.T) {
 func TestFormatter_TeamList(t *testing.T) {
 	f := New()
 
-	teams := []linear.Team{
+	teams := []core.Team{
 		{Name: "Engineering", Key: "ENG"},
 		{Name: "Product", Key: "PROD"},
 	}
@@ -536,7 +537,7 @@ func TestFormatter_TeamList(t *testing.T) {
 	})
 
 	t.Run("empty list", func(t *testing.T) {
-		result := f.TeamList([]linear.Team{}, nil)
+		result := f.TeamList([]core.Team{}, nil)
 		if result != "No teams found." {
 			t.Errorf("expected 'No teams found.', got '%s'", result)
 		}
@@ -546,7 +547,7 @@ func TestFormatter_TeamList(t *testing.T) {
 func TestFormatter_UserList(t *testing.T) {
 	f := New()
 
-	users := []linear.User{
+	users := []core.User{
 		{Name: "Stefan", Email: "stefan@test.com", Active: true},
 		{Name: "Maria", Email: "maria@test.com", Active: true, Admin: true},
 	}
@@ -562,7 +563,7 @@ func TestFormatter_UserList(t *testing.T) {
 	})
 
 	t.Run("empty list", func(t *testing.T) {
-		result := f.UserList([]linear.User{}, nil)
+		result := f.UserList([]core.User{}, nil)
 		if result != "No users found." {
 			t.Errorf("expected 'No users found.', got '%s'", result)
 		}
@@ -572,12 +573,12 @@ func TestFormatter_UserList(t *testing.T) {
 func TestFormatter_CommentList(t *testing.T) {
 	f := New()
 
-	comments := []linear.Comment{
+	comments := []core.Comment{
 		{
 			ID:        "c1",
 			Body:      "First comment",
 			CreatedAt: "2025-01-15T10:00:00Z",
-			User:      linear.User{Name: "Stefan"},
+			User:      core.User{Name: "Stefan"},
 		},
 	}
 
@@ -589,7 +590,7 @@ func TestFormatter_CommentList(t *testing.T) {
 	})
 
 	t.Run("empty list", func(t *testing.T) {
-		result := f.CommentList([]linear.Comment{}, nil)
+		result := f.CommentList([]core.Comment{}, nil)
 		if result != "No comments found." {
 			t.Errorf("expected 'No comments found.', got '%s'", result)
 		}
@@ -603,7 +604,7 @@ func TestFormatter_Issue_Full_WithAllFields(t *testing.T) {
 	estimate := 5.0
 	dueDate := "2025-01-30"
 
-	issue := &linear.Issue{
+	issue := &core.Issue{
 		ID:          "uuid-123",
 		Identifier:  "CEN-999",
 		Title:       "Complete Feature",
@@ -612,15 +613,15 @@ func TestFormatter_Issue_Full_WithAllFields(t *testing.T) {
 		CreatedAt:   "2025-01-10T10:00:00Z",
 		UpdatedAt:   "2025-01-15T15:30:00Z",
 		State:       struct{ID string `json:"id"`; Name string `json:"name"`}{Name: "In Progress"},
-		Assignee:    &linear.User{Name: "Stefan", Email: "stefan@test.com"},
+		Assignee:    &core.User{Name: "Stefan", Email: "stefan@test.com"},
 		Priority:    &priority,
 		Estimate:    &estimate,
 		DueDate:     &dueDate,
-		Project:     &linear.Project{Name: "Main Project"},
-		Cycle:       &linear.CycleReference{Number: 67, Name: "Sprint 67"},
-		Labels:      &linear.LabelConnection{Nodes: []linear.Label{{Name: "urgent"}, {Name: "frontend"}}},
-		Parent:      &linear.ParentIssue{Identifier: "CEN-100", Title: "Epic"},
-		Children:    linear.ChildrenNodes{Nodes: []linear.SubIssue{{Identifier: "CEN-1000", Title: "Subtask", State: struct{ID string `json:"id"`; Name string `json:"name"`}{Name: "Todo"}}}},
+		Project:     &core.Project{Name: "Main Project"},
+		Cycle:       &core.CycleReference{Number: 67, Name: "Sprint 67"},
+		Labels:      &core.LabelConnection{Nodes: []core.Label{{Name: "urgent"}, {Name: "frontend"}}},
+		Parent:      &core.ParentIssue{Identifier: "CEN-100", Title: "Epic"},
+		Children:    core.ChildrenNodes{Nodes: []core.SubIssue{{Identifier: "CEN-1000", Title: "Subtask", State: struct{ID string `json:"id"`; Name string `json:"name"`}{Name: "Todo"}}}},
 	}
 
 	result := f.Issue(issue, Full)
@@ -658,7 +659,7 @@ func TestFormatter_Issue_Full_WithAllFields(t *testing.T) {
 func TestFormatter_Cycle_Full(t *testing.T) {
 	f := New()
 
-	cycle := &linear.Cycle{
+	cycle := &core.Cycle{
 		ID:          "cycle-uuid",
 		Name:        "Sprint 67",
 		Number:      67,
@@ -669,7 +670,7 @@ func TestFormatter_Cycle_Full(t *testing.T) {
 		UpdatedAt:   "2025-01-14T00:00:00Z",
 		Progress:    0.75,
 		IsActive:    true,
-		Team:        &linear.Team{Name: "Engineering", Key: "ENG"},
+		Team:        &core.Team{Name: "Engineering", Key: "ENG"},
 		ScopeHistory:          []int{50, 52, 55},
 		CompletedScopeHistory: []int{10, 25, 40},
 		IssueCountHistory:     []int{20, 22, 24},

@@ -6,6 +6,16 @@ import (
 	"os"
 
 	"github.com/joa23/linear-cli/internal/config"
+	"github.com/joa23/linear-cli/internal/linear/attachments"
+	"github.com/joa23/linear-cli/internal/linear/comments"
+	"github.com/joa23/linear-cli/internal/linear/core"
+	"github.com/joa23/linear-cli/internal/linear/cycles"
+	"github.com/joa23/linear-cli/internal/linear/helpers"
+	"github.com/joa23/linear-cli/internal/linear/issues"
+	"github.com/joa23/linear-cli/internal/linear/projects"
+	"github.com/joa23/linear-cli/internal/linear/teams"
+	"github.com/joa23/linear-cli/internal/linear/users"
+	"github.com/joa23/linear-cli/internal/linear/workflows"
 	"github.com/joa23/linear-cli/internal/oauth"
 	"github.com/joa23/linear-cli/internal/token"
 )
@@ -15,17 +25,17 @@ import (
 // to specialized sub-clients for specific functionality.
 type Client struct {
 	// Base client with shared HTTP functionality
-	base *BaseClient
+	base *core.BaseClient
 
 	// Sub-clients for different domains
-	Issues        *IssueClient
-	Projects      *ProjectClient
-	Comments      *CommentClient
-	Teams         *TeamClient
-	Notifications *NotificationClient
-	Workflows     *WorkflowClient
-	Attachments   *AttachmentClient
-	Cycles        *CycleClient
+	Issues        *issues.Client
+	Projects      *projects.Client
+	Comments      *comments.Client
+	Teams         *teams.Client
+	Notifications *users.NotificationClient
+	Workflows     *workflows.Client
+	Attachments   *attachments.Client
+	Cycles        *cycles.Client
 
 	// Resolver for human-readable identifier translation
 	resolver *Resolver
@@ -37,19 +47,19 @@ type Client struct {
 // NewClient creates a new Linear API client with all sub-clients initialized
 func NewClient(apiToken string) *Client {
 	// Create the base client with shared HTTP functionality
-	base := NewBaseClient(apiToken)
+	base := core.NewBaseClient(apiToken)
 
 	// Initialize the main client with all sub-clients
 	client := &Client{
 		base:          base,
-		Issues:        NewIssueClient(base),
-		Projects:      NewProjectClient(base),
-		Comments:      NewCommentClient(base),
-		Teams:         NewTeamClient(base),
-		Notifications: NewNotificationClient(base),
-		Workflows:     NewWorkflowClient(base),
-		Attachments:   NewAttachmentClient(base),
-		Cycles:        NewCycleClient(base),
+		Issues:        issues.NewClient(base),
+		Projects:      projects.NewClient(base),
+		Comments:      comments.NewClient(base),
+		Teams:         teams.NewClient(base),
+		Notifications: users.NewNotificationClient(base),
+		Workflows:     workflows.NewClient(base),
+		Attachments:   attachments.NewClient(base),
+		Cycles:        cycles.NewClient(base),
 		apiToken:      apiToken,
 	}
 
@@ -91,7 +101,7 @@ func NewClientWithTokenPath(tokenPath string) *Client {
 
 			// If OAuth credentials available AND token has refresh capability
 			if clientID != "" && clientSecret != "" && tokenData.RefreshToken != "" {
-				oauthHandler := oauth.NewHandlerWithClient(clientID, clientSecret, GetSharedHTTPClient())
+				oauthHandler := oauth.NewHandlerWithClient(clientID, clientSecret, core.GetSharedHTTPClient())
 				refresherAdapter := oauth.NewRefresherAdapter(oauthHandler)
 				refresher := token.NewRefresher(storage, refresherAdapter)
 				provider = token.NewRefreshingProvider(refresher)
@@ -113,19 +123,19 @@ func NewClientWithTokenPath(tokenPath string) *Client {
 	}
 
 	// Create base client with provider
-	base := NewBaseClientWithProvider(provider)
+	base := core.NewBaseClientWithProvider(provider)
 
 	// Initialize the main client with all sub-clients
 	client := &Client{
 		base:          base,
-		Issues:        NewIssueClient(base),
-		Projects:      NewProjectClient(base),
-		Comments:      NewCommentClient(base),
-		Teams:         NewTeamClient(base),
-		Notifications: NewNotificationClient(base),
-		Workflows:     NewWorkflowClient(base),
-		Attachments:   NewAttachmentClient(base),
-		Cycles:        NewCycleClient(base),
+		Issues:        issues.NewClient(base),
+		Projects:      projects.NewClient(base),
+		Comments:      comments.NewClient(base),
+		Teams:         teams.NewClient(base),
+		Notifications: users.NewNotificationClient(base),
+		Workflows:     workflows.NewClient(base),
+		Attachments:   attachments.NewClient(base),
+		Cycles:        cycles.NewClient(base),
 		apiToken:      apiToken,
 	}
 
@@ -149,16 +159,16 @@ func (c *Client) GetAPIToken() string {
 
 // GetHTTPClient returns the underlying HTTP client for testing purposes
 func (c *Client) GetHTTPClient() *http.Client {
-	return c.base.httpClient
+	return c.base.HTTPClient
 }
 
 // SetBase sets the base client (for testing purposes)
-func (c *Client) SetBase(base *BaseClient) {
+func (c *Client) SetBase(base *core.BaseClient) {
 	c.base = base
 }
 
 // GetBase returns the base client (for testing purposes)
-func (c *Client) GetBase() *BaseClient {
+func (c *Client) GetBase() *core.BaseClient {
 	return c.base
 }
 
@@ -171,14 +181,15 @@ func (c *Client) TestConnection() error {
 	return err
 }
 
+
 // Direct method delegates for backward compatibility
 // These methods maintain the existing API surface while delegating to sub-clients
 
 // Issue operations
-func (c *Client) CreateIssue(title, description, teamKeyOrName string) (*Issue, error) {
+func (c *Client) CreateIssue(title, description, teamKeyOrName string) (*core.Issue, error) {
 	// Resolve team name/key to UUID if needed
 	teamID := teamKeyOrName
-	if !isUUID(teamKeyOrName) {
+	if !helpers.IsUUID(teamKeyOrName) {
 		resolvedID, err := c.resolver.ResolveTeam(teamKeyOrName)
 		if err != nil {
 			return nil, err
@@ -192,12 +203,12 @@ func (c *Client) CreateIssue(title, description, teamKeyOrName string) (*Issue, 
 // GetIssue retrieves an issue with the best context automatically determined
 // This is the preferred method for getting issues as it intelligently chooses
 // whether to include parent or project context based on the issue's relationships.
-func (c *Client) GetIssue(identifierOrID string) (*Issue, error) {
+func (c *Client) GetIssue(identifierOrID string) (*core.Issue, error) {
 	// Resolve identifier to UUID if needed
 	// Linear's issue(id:) query accepts UUIDs but not identifiers,
 	// so we use SearchIssuesEnhanced with identifier filter for identifiers
 	issueID := identifierOrID
-	if isIssueIdentifier(identifierOrID) {
+	if helpers.IsIssueIdentifier(identifierOrID) {
 		resolvedID, err := c.resolver.ResolveIssue(identifierOrID)
 		if err != nil {
 			return nil, err
@@ -210,24 +221,24 @@ func (c *Client) GetIssue(identifierOrID string) (*Issue, error) {
 
 // GetIssueBasic retrieves basic issue information without additional context
 // Use this when you only need basic issue data without parent/project details.
-func (c *Client) GetIssueBasic(issueID string) (*Issue, error) {
+func (c *Client) GetIssueBasic(issueID string) (*core.Issue, error) {
 	return c.Issues.GetIssue(issueID)
 }
 
 // DEPRECATED: Use GetIssue() instead, which automatically determines the best context
-func (c *Client) GetIssueWithProjectContext(issueID string) (*Issue, error) {
+func (c *Client) GetIssueWithProjectContext(issueID string) (*core.Issue, error) {
 	return c.Issues.GetIssueWithProjectContext(issueID)
 }
 
 // DEPRECATED: Use GetIssue() instead, which automatically determines the best context
-func (c *Client) GetIssueWithParentContext(issueID string) (*Issue, error) {
+func (c *Client) GetIssueWithParentContext(issueID string) (*core.Issue, error) {
 	return c.Issues.GetIssueWithParentContext(issueID)
 }
 
 func (c *Client) UpdateIssueState(identifierOrID, stateID string) error {
 	// Resolve issue identifier to UUID if needed
 	issueID := identifierOrID
-	if isIssueIdentifier(identifierOrID) {
+	if helpers.IsIssueIdentifier(identifierOrID) {
 		resolvedID, err := c.resolver.ResolveIssue(identifierOrID)
 		if err != nil {
 			return err
@@ -241,7 +252,7 @@ func (c *Client) UpdateIssueState(identifierOrID, stateID string) error {
 func (c *Client) AssignIssue(identifierOrID, assigneeNameOrEmail string) error {
 	// Resolve issue identifier to UUID if needed
 	issueID := identifierOrID
-	if isIssueIdentifier(identifierOrID) {
+	if helpers.IsIssueIdentifier(identifierOrID) {
 		resolvedID, err := c.resolver.ResolveIssue(identifierOrID)
 		if err != nil {
 			return err
@@ -252,7 +263,7 @@ func (c *Client) AssignIssue(identifierOrID, assigneeNameOrEmail string) error {
 	// Resolve assignee name/email to UUID if needed
 	// Empty string is allowed for unassignment
 	assigneeID := assigneeNameOrEmail
-	if assigneeNameOrEmail != "" && !isUUID(assigneeNameOrEmail) {
+	if assigneeNameOrEmail != "" && !helpers.IsUUID(assigneeNameOrEmail) {
 		resolvedID, err := c.resolver.ResolveUser(assigneeNameOrEmail)
 		if err != nil {
 			return err
@@ -263,17 +274,14 @@ func (c *Client) AssignIssue(identifierOrID, assigneeNameOrEmail string) error {
 	return c.Issues.AssignIssue(issueID, assigneeID)
 }
 
-func (c *Client) ListAssignedIssues(userID string) ([]Issue, error) {
-	// Validate userID even though the new implementation uses the authenticated user
-	// This maintains backward compatibility with validation expectations
-	if userID == "" {
-		return nil, &ValidationError{Field: "userID", Value: userID, Message: "cannot be empty"}
+func (c *Client) ListAssignedIssues(limit int) ([]core.Issue, error) {
+	if limit <= 0 {
+		limit = 50 // default limit
 	}
-	// Use default limit of 50 since the wrapper doesn't expose limit parameter
-	return c.Issues.ListAssignedIssues(50)
+	return c.Issues.ListAssignedIssues(limit)
 }
 
-func (c *Client) GetSubIssues(parentIssueID string) ([]SubIssue, error) {
+func (c *Client) GetSubIssues(parentIssueID string) ([]core.SubIssue, error) {
 	return c.Issues.GetSubIssues(parentIssueID)
 }
 
@@ -291,14 +299,18 @@ func (c *Client) RemoveIssueMetadataKey(issueID, key string) error {
 
 // GetIssueSimplified retrieves basic issue information using a simplified query
 // Use this as a fallback when the full context queries fail due to server issues.
-func (c *Client) GetIssueSimplified(issueID string) (*Issue, error) {
+func (c *Client) GetIssueSimplified(issueID string) (*core.Issue, error) {
 	return c.Issues.GetIssueSimplified(issueID)
 }
 
-func (c *Client) UpdateIssue(identifierOrID string, input UpdateIssueInput) (*Issue, error) {
+func (c *Client) GetIssueWithRelations(identifier string) (*core.IssueWithRelations, error) {
+	return c.Issues.GetIssueWithRelations(identifier)
+}
+
+func (c *Client) UpdateIssue(identifierOrID string, input core.UpdateIssueInput) (*core.Issue, error) {
 	// Resolve issue identifier to UUID if needed
 	issueID := identifierOrID
-	if isIssueIdentifier(identifierOrID) {
+	if helpers.IsIssueIdentifier(identifierOrID) {
 		resolvedID, err := c.resolver.ResolveIssue(identifierOrID)
 		if err != nil {
 			return nil, err
@@ -307,7 +319,7 @@ func (c *Client) UpdateIssue(identifierOrID string, input UpdateIssueInput) (*Is
 	}
 
 	// Resolve AssigneeID (name/email to UUID)
-	if input.AssigneeID != nil && *input.AssigneeID != "" && !isUUID(*input.AssigneeID) {
+	if input.AssigneeID != nil && *input.AssigneeID != "" && !helpers.IsUUID(*input.AssigneeID) {
 		resolvedID, err := c.resolver.ResolveUser(*input.AssigneeID)
 		if err != nil {
 			return nil, err
@@ -316,7 +328,7 @@ func (c *Client) UpdateIssue(identifierOrID string, input UpdateIssueInput) (*Is
 	}
 
 	// Resolve ParentID (identifier to UUID)
-	if input.ParentID != nil && *input.ParentID != "" && isIssueIdentifier(*input.ParentID) {
+	if input.ParentID != nil && *input.ParentID != "" && helpers.IsIssueIdentifier(*input.ParentID) {
 		resolvedID, err := c.resolver.ResolveIssue(*input.ParentID)
 		if err != nil {
 			return nil, err
@@ -325,7 +337,7 @@ func (c *Client) UpdateIssue(identifierOrID string, input UpdateIssueInput) (*Is
 	}
 
 	// Resolve TeamID (name/key to UUID)
-	if input.TeamID != nil && *input.TeamID != "" && !isUUID(*input.TeamID) {
+	if input.TeamID != nil && *input.TeamID != "" && !helpers.IsUUID(*input.TeamID) {
 		resolvedID, err := c.resolver.ResolveTeam(*input.TeamID)
 		if err != nil {
 			return nil, err
@@ -339,15 +351,15 @@ func (c *Client) UpdateIssue(identifierOrID string, input UpdateIssueInput) (*Is
 	return c.Issues.UpdateIssue(issueID, input)
 }
 
-func (c *Client) ListAllIssues(filter *IssueFilter) (*ListAllIssuesResult, error) {
+func (c *Client) ListAllIssues(filter *core.IssueFilter) (*core.ListAllIssuesResult, error) {
 	return c.Issues.ListAllIssues(filter)
 }
 
 // Project operations
-func (c *Client) CreateProject(name, description, teamKeyOrName string) (*Project, error) {
+func (c *Client) CreateProject(name, description, teamKeyOrName string) (*core.Project, error) {
 	// Resolve team name/key to UUID if needed
 	teamID := teamKeyOrName
-	if !isUUID(teamKeyOrName) {
+	if !helpers.IsUUID(teamKeyOrName) {
 		resolvedID, err := c.resolver.ResolveTeam(teamKeyOrName)
 		if err != nil {
 			return nil, err
@@ -358,16 +370,35 @@ func (c *Client) CreateProject(name, description, teamKeyOrName string) (*Projec
 	return c.Projects.CreateProject(name, description, teamID)
 }
 
-func (c *Client) GetProject(projectID string) (*Project, error) {
+func (c *Client) GetProject(projectID string) (*core.Project, error) {
 	return c.Projects.GetProject(projectID)
 }
 
-func (c *Client) ListAllProjects() ([]Project, error) {
-	return c.Projects.ListAllProjects(0) // 0 means use default limit
+func (c *Client) ListAllProjects(limit int) ([]core.Project, error) {
+	if limit <= 0 {
+		limit = 50 // default limit
+	}
+	return c.Projects.ListAllProjects(limit)
 }
 
-func (c *Client) ListUserProjects(userID string) ([]Project, error) {
-	return c.Projects.ListUserProjects(userID, 0) // 0 means use default limit
+func (c *Client) ListByTeam(teamID string, limit int) ([]core.Project, error) {
+	if limit <= 0 {
+		limit = 50 // default limit
+	}
+	return c.Projects.ListByTeam(teamID, limit)
+}
+
+func (c *Client) ListUserProjects(userID string, limit int) ([]core.Project, error) {
+	if limit <= 0 {
+		limit = 50 // default limit
+	}
+	return c.Projects.ListUserProjects(userID, limit)
+}
+
+func (c *Client) UpdateProject(projectID string, input interface{}) (*core.Project, error) {
+	// Convert interface{} to the actual type expected by Projects client
+	// This is a temporary solution for Phase 1 to maintain flexibility
+	return c.Projects.UpdateProject(projectID, input.(projects.UpdateProjectInput))
 }
 
 func (c *Client) UpdateProjectState(projectID, state string) error {
@@ -387,14 +418,14 @@ func (c *Client) RemoveProjectMetadataKey(projectID, key string) error {
 }
 
 // Cycle operations
-func (c *Client) GetCycle(cycleID string) (*Cycle, error) {
+func (c *Client) GetCycle(cycleID string) (*core.Cycle, error) {
 	return c.Cycles.GetCycle(cycleID)
 }
 
-func (c *Client) GetActiveCycle(teamKeyOrName string) (*Cycle, error) {
+func (c *Client) GetActiveCycle(teamKeyOrName string) (*core.Cycle, error) {
 	// Resolve team name/key to UUID if needed
 	teamID := teamKeyOrName
-	if !isUUID(teamKeyOrName) {
+	if !helpers.IsUUID(teamKeyOrName) {
 		resolvedID, err := c.resolver.ResolveTeam(teamKeyOrName)
 		if err != nil {
 			return nil, err
@@ -404,9 +435,9 @@ func (c *Client) GetActiveCycle(teamKeyOrName string) (*Cycle, error) {
 	return c.Cycles.GetActiveCycle(teamID)
 }
 
-func (c *Client) ListCycles(filter *CycleFilter) (*CycleSearchResult, error) {
+func (c *Client) ListCycles(filter *core.CycleFilter) (*core.CycleSearchResult, error) {
 	// Resolve team name/key to UUID if needed
-	if filter != nil && filter.TeamID != "" && !isUUID(filter.TeamID) {
+	if filter != nil && filter.TeamID != "" && !helpers.IsUUID(filter.TeamID) {
 		resolvedID, err := c.resolver.ResolveTeam(filter.TeamID)
 		if err != nil {
 			return nil, err
@@ -416,9 +447,9 @@ func (c *Client) ListCycles(filter *CycleFilter) (*CycleSearchResult, error) {
 	return c.Cycles.ListCycles(filter)
 }
 
-func (c *Client) CreateCycle(input *CreateCycleInput) (*Cycle, error) {
+func (c *Client) CreateCycle(input *core.CreateCycleInput) (*core.Cycle, error) {
 	// Resolve team name/key to UUID if needed
-	if input != nil && input.TeamID != "" && !isUUID(input.TeamID) {
+	if input != nil && input.TeamID != "" && !helpers.IsUUID(input.TeamID) {
 		resolvedID, err := c.resolver.ResolveTeam(input.TeamID)
 		if err != nil {
 			return nil, err
@@ -428,7 +459,7 @@ func (c *Client) CreateCycle(input *CreateCycleInput) (*Cycle, error) {
 	return c.Cycles.CreateCycle(input)
 }
 
-func (c *Client) UpdateCycle(cycleID string, input *UpdateCycleInput) (*Cycle, error) {
+func (c *Client) UpdateCycle(cycleID string, input *core.UpdateCycleInput) (*core.Cycle, error) {
 	return c.Cycles.UpdateCycle(cycleID, input)
 }
 
@@ -436,28 +467,20 @@ func (c *Client) ArchiveCycle(cycleID string) error {
 	return c.Cycles.ArchiveCycle(cycleID)
 }
 
-func (c *Client) GetCycleIssues(cycleID string, limit int) ([]Issue, error) {
+func (c *Client) GetCycleIssues(cycleID string, limit int) ([]core.Issue, error) {
 	return c.Cycles.GetCycleIssues(cycleID, limit)
 }
 
 // Comment operations
-func (c *Client) CreateComment(issueID, body string) (string, error) {
-	comment, err := c.Comments.CreateComment(issueID, body)
-	if err != nil {
-		return "", err
-	}
-	return comment.ID, nil
+func (c *Client) CreateComment(issueID, body string) (*core.Comment, error) {
+	return c.Comments.CreateComment(issueID, body)
 }
 
-func (c *Client) CreateCommentReply(issueID, parentID, body string) (string, error) {
-	comment, err := c.Comments.CreateCommentReply(issueID, parentID, body)
-	if err != nil {
-		return "", err
-	}
-	return comment.ID, nil
+func (c *Client) CreateCommentReply(issueID, parentID, body string) (*core.Comment, error) {
+	return c.Comments.CreateCommentReply(issueID, parentID, body)
 }
 
-func (c *Client) GetCommentWithReplies(commentID string) (*CommentWithReplies, error) {
+func (c *Client) GetCommentWithReplies(commentID string) (*core.CommentWithReplies, error) {
 	return c.Comments.GetCommentWithReplies(commentID)
 }
 
@@ -466,14 +489,14 @@ func (c *Client) AddReaction(targetID, emoji string) error {
 }
 
 // Team operations
-func (c *Client) GetTeams() ([]Team, error) {
+func (c *Client) GetTeams() ([]core.Team, error) {
 	return c.Teams.GetTeams()
 }
 
-func (c *Client) GetTeam(keyOrName string) (*Team, error) {
+func (c *Client) GetTeam(keyOrName string) (*core.Team, error) {
 	// Resolve team key/name to UUID if needed
 	teamID := keyOrName
-	if !isUUID(keyOrName) {
+	if !helpers.IsUUID(keyOrName) {
 		resolvedID, err := c.resolver.ResolveTeam(keyOrName)
 		if err != nil {
 			return nil, err
@@ -483,7 +506,7 @@ func (c *Client) GetTeam(keyOrName string) (*Team, error) {
 	return c.Teams.GetTeam(teamID)
 }
 
-func (c *Client) GetTeamEstimateScale(keyOrName string) (*EstimateScale, error) {
+func (c *Client) GetTeamEstimateScale(keyOrName string) (*core.EstimateScale, error) {
 	team, err := c.GetTeam(keyOrName)
 	if err != nil {
 		return nil, err
@@ -491,7 +514,7 @@ func (c *Client) GetTeamEstimateScale(keyOrName string) (*EstimateScale, error) 
 	return team.GetEstimateScale(), nil
 }
 
-func (c *Client) GetViewer() (*User, error) {
+func (c *Client) GetViewer() (*core.User, error) {
 	return c.Teams.GetViewer()
 }
 
@@ -504,7 +527,7 @@ func (c *Client) GetAppUserID() (string, error) {
 }
 
 // Notification operations
-func (c *Client) GetNotifications(includeRead bool, limit int) ([]Notification, error) {
+func (c *Client) GetNotifications(includeRead bool, limit int) ([]core.Notification, error) {
 	return c.Notifications.GetNotifications(includeRead, limit)
 }
 
@@ -513,24 +536,24 @@ func (c *Client) MarkNotificationAsRead(notificationID string) error {
 }
 
 // Workflow operations
-func (c *Client) GetWorkflowStates(teamID string) ([]WorkflowState, error) {
+func (c *Client) GetWorkflowStates(teamID string) ([]core.WorkflowState, error) {
 	return c.Workflows.GetWorkflowStates(teamID)
 }
 
-func (c *Client) GetWorkflowStateByName(teamID, stateName string) (*WorkflowState, error) {
+func (c *Client) GetWorkflowStateByName(teamID, stateName string) (*core.WorkflowState, error) {
 	return c.Workflows.GetWorkflowStateByName(teamID, stateName)
 }
 
 // User operations
-func (c *Client) ListUsers(filter *UserFilter) ([]User, error) {
+func (c *Client) ListUsers(filter *core.UserFilter) ([]core.User, error) {
 	return c.Teams.ListUsers(filter)
 }
 
-func (c *Client) ListUsersWithPagination(filter *UserFilter) (*ListUsersResult, error) {
+func (c *Client) ListUsersWithPagination(filter *core.UserFilter) (*core.ListUsersResult, error) {
 	return c.Teams.ListUsersWithPagination(filter)
 }
 
-func (c *Client) GetUser(idOrEmail string) (*User, error) {
+func (c *Client) GetUser(idOrEmail string) (*core.User, error) {
 	// First try to resolve as email or name
 	userID, err := c.resolver.ResolveUser(idOrEmail)
 	if err != nil {
@@ -539,7 +562,7 @@ func (c *Client) GetUser(idOrEmail string) (*User, error) {
 	}
 
 	// Get user by listing with no filters and finding the matching ID
-	users, err := c.ListUsers(&UserFilter{First: 250})
+	users, err := c.ListUsers(&core.UserFilter{First: 250})
 	if err != nil {
 		return nil, err
 	}
@@ -571,6 +594,6 @@ func (c *Client) ResolveCycleIdentifier(numberOrNameOrID string, teamID string) 
 }
 
 // Issue search operations
-func (c *Client) SearchIssues(filters *IssueSearchFilters) (*IssueSearchResult, error) {
+func (c *Client) SearchIssues(filters *core.IssueSearchFilters) (*core.IssueSearchResult, error) {
 	return c.Issues.SearchIssuesEnhanced(filters)
 }

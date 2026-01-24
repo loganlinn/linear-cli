@@ -1,6 +1,13 @@
 package linear
 
 import (
+	"github.com/joa23/linear-cli/internal/linear/core"
+	"github.com/joa23/linear-cli/internal/linear/comments"
+	"github.com/joa23/linear-cli/internal/linear/attachments"
+	"github.com/joa23/linear-cli/internal/linear/issues"
+	"github.com/joa23/linear-cli/internal/linear/projects"
+	"github.com/joa23/linear-cli/internal/linear/teams"
+	"github.com/joa23/linear-cli/internal/linear/users"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,17 +21,17 @@ func setupMockServer(t *testing.T, handler http.HandlerFunc) (*httptest.Server, 
 	server := httptest.NewServer(handler)
 
 	// Create a base client pointing to the test server
-	baseClient := NewTestBaseClient("test-token", server.URL, server.Client())
+	baseClient := core.NewTestBaseClient("test-token", server.URL, server.Client())
 
 	// Create a full client with all sub-clients
 	client := &Client{
 		base:          baseClient,
-		Issues:        NewIssueClient(baseClient),
-		Comments:      NewCommentClient(baseClient),
-		Teams:         NewTeamClient(baseClient),
-		Projects:      NewProjectClient(baseClient),
-		Notifications: NewNotificationClient(baseClient),
-		Attachments:   NewAttachmentClient(baseClient),
+		Issues:        issues.NewClient(baseClient),
+		Comments:      comments.NewClient(baseClient),
+		Teams:         teams.NewClient(baseClient),
+		Projects:      projects.NewClient(baseClient),
+		Notifications: users.NewNotificationClient(baseClient),
+		Attachments:   attachments.NewClient(baseClient),
 	}
 
 	return server, client

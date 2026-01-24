@@ -1,9 +1,12 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os"
 
+	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/token"
 	"github.com/spf13/cobra"
 )
 
@@ -158,11 +161,76 @@ Configuration:
 	return rootCmd
 }
 
-// Execute runs the CLI
+// Execute runs the CLI with dependency injection
 func Execute() {
+	// Check if this is an auth command (doesn't need client initialization)
+	if isAuthCommand() {
+		// Auth commands handle their own client creation
+		rootCmd := NewRootCmd()
+		if err := rootCmd.Execute(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	// Initialize client ONCE at startup for all other commands
+	client, err := initializeClient()
+	if err != nil {
+		// Show friendly error for authentication issues
+		fmt.Fprintf(os.Stderr, "Error: %v\n\n", err)
+		if err.Error() == "not authenticated. Run 'linear auth login' to authenticate" {
+			fmt.Fprintf(os.Stderr, "Run 'linear auth login' to authenticate.\n")
+		}
+		os.Exit(1)
+	}
+
+	// Create dependency container
+	deps := NewDependencies(client)
+
+	// Inject into command context
+	ctx := context.WithValue(context.Background(), dependenciesKey, deps)
+
 	rootCmd := NewRootCmd()
+	rootCmd.SetContext(ctx)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// isAuthCommand checks if the current command is an auth-related command
+// that doesn't require client initialization
+func isAuthCommand() bool {
+	// Check if "auth" appears in the command arguments
+	// This handles: linear auth login, linear auth logout, linear auth status
+	for _, arg := range os.Args[1:] {
+		if arg == "auth" {
+			return true
+		}
+		// Stop at first non-flag argument
+		if len(arg) > 0 && arg[0] != '-' {
+			break
+		}
+	}
+	return false
+}
+
+// initializeClient creates and configures the Linear client
+// Loads token from disk and returns an authenticated client
+func initializeClient() (*linear.Client, error) {
+	tokenStorage := token.NewStorage(token.GetDefaultTokenPath())
+	exists, _ := tokenStorage.TokenExistsWithError()
+	if !exists {
+		return nil, fmt.Errorf("not authenticated. Run 'linear auth login' to authenticate")
+	}
+
+	tokenData, err := tokenStorage.LoadTokenData()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load token: %w", err)
+	}
+
+	// Create client with access token
+	return linear.NewClient(tokenData.AccessToken), nil
 }

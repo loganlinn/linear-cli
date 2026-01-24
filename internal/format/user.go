@@ -3,11 +3,11 @@ package format
 import (
 	"strings"
 
-	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/core"
 )
 
 // User formats a single user
-func (f *Formatter) User(user *linear.User) string {
+func (f *Formatter) User(user *core.User) string {
 	if user == nil {
 		return ""
 	}
@@ -53,7 +53,7 @@ func (f *Formatter) User(user *linear.User) string {
 }
 
 // UserList formats a list of users with optional pagination
-func (f *Formatter) UserList(users []linear.User, page *Pagination) string {
+func (f *Formatter) UserList(users []core.User, page *Pagination) string {
 	if len(users) == 0 {
 		return "No users found."
 	}
@@ -81,7 +81,7 @@ func (f *Formatter) UserList(users []linear.User, page *Pagination) string {
 	return b.String()
 }
 
-func (f *Formatter) userCompact(user *linear.User) string {
+func (f *Formatter) userCompact(user *core.User) string {
 	var b strings.Builder
 
 	// Line 1: Name and email

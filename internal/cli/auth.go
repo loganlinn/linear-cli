@@ -11,6 +11,7 @@ import (
 
 	"github.com/joa23/linear-cli/internal/config"
 	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/core"
 	"github.com/joa23/linear-cli/internal/oauth"
 	"github.com/joa23/linear-cli/internal/token"
 	"github.com/spf13/cobra"
@@ -114,7 +115,7 @@ func handleLogin() error {
 	}
 
 	// Step 3: Run OAuth flow
-	oauthHandler := oauth.NewHandlerWithClient(clientID, clientSecret, linear.GetSharedHTTPClient())
+	oauthHandler := oauth.NewHandlerWithClient(clientID, clientSecret, core.GetSharedHTTPClient())
 	state := oauth.GenerateState()
 
 	// Use specified port (must match OAuth app configuration)

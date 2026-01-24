@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 
-	"github.com/joa23/linear-cli/internal/service"
 	"github.com/spf13/cobra"
 )
 
@@ -31,12 +30,12 @@ func newTeamsListCmd() *cobra.Command {
 		Short: "List all teams",
 		Long:  "List all teams in your workspace.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			svc, err := getTeamService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
-			output, err := svc.ListAll()
+			output, err := deps.Teams.ListAll()
 			if err != nil {
 				return fmt.Errorf("failed to list teams: %w", err)
 			}
@@ -56,12 +55,12 @@ func newTeamsGetCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			teamID := args[0]
 
-			svc, err := getTeamService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
-			output, err := svc.Get(teamID)
+			output, err := deps.Teams.Get(teamID)
 			if err != nil {
 				return fmt.Errorf("failed to get team: %w", err)
 			}
@@ -81,12 +80,12 @@ func newTeamsLabelsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			teamID := args[0]
 
-			svc, err := getTeamService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
-			output, err := svc.GetLabels(teamID)
+			output, err := deps.Teams.GetLabels(teamID)
 			if err != nil {
 				return fmt.Errorf("failed to get labels: %w", err)
 			}
@@ -106,12 +105,12 @@ func newTeamsStatesCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			teamID := args[0]
 
-			svc, err := getTeamService()
+			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
 			}
 
-			output, err := svc.GetWorkflowStates(teamID)
+			output, err := deps.Teams.GetWorkflowStates(teamID)
 			if err != nil {
 				return fmt.Errorf("failed to get workflow states: %w", err)
 			}
@@ -120,12 +119,4 @@ func newTeamsStatesCmd() *cobra.Command {
 			return nil
 		},
 	}
-}
-
-func getTeamService() (*service.TeamService, error) {
-	client, err := getLinearClient()
-	if err != nil {
-		return nil, err
-	}
-	return service.New(client).Teams, nil
 }

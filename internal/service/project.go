@@ -4,17 +4,17 @@ import (
 	"fmt"
 
 	"github.com/joa23/linear-cli/internal/format"
-	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/projects"
 )
 
 // ProjectService handles project-related operations
 type ProjectService struct {
-	client    *linear.Client
+	client    ProjectClientOperations
 	formatter *format.Formatter
 }
 
 // NewProjectService creates a new ProjectService
-func NewProjectService(client *linear.Client, formatter *format.Formatter) *ProjectService {
+func NewProjectService(client ProjectClientOperations, formatter *format.Formatter) *ProjectService {
 	return &ProjectService{
 		client:    client,
 		formatter: formatter,
@@ -23,7 +23,7 @@ func NewProjectService(client *linear.Client, formatter *format.Formatter) *Proj
 
 // Get retrieves a single project by ID
 func (s *ProjectService) Get(projectID string) (string, error) {
-	project, err := s.client.Projects.GetProject(projectID)
+	project, err := s.client.GetProject(projectID)
 	if err != nil {
 		return "", fmt.Errorf("failed to get project %s: %w", projectID, err)
 	}
@@ -37,7 +37,7 @@ func (s *ProjectService) ListAll(limit int) (string, error) {
 		limit = 50
 	}
 
-	projects, err := s.client.Projects.ListAllProjects(limit)
+	projects, err := s.client.ListAllProjects(limit)
 	if err != nil {
 		return "", fmt.Errorf("failed to list projects: %w", err)
 	}
@@ -57,7 +57,7 @@ func (s *ProjectService) ListByTeam(teamID string, limit int) (string, error) {
 		return "", fmt.Errorf("failed to resolve team '%s': %w", teamID, err)
 	}
 
-	projects, err := s.client.Projects.ListByTeam(resolvedTeamID, limit)
+	projects, err := s.client.ListByTeam(resolvedTeamID, limit)
 	if err != nil {
 		return "", fmt.Errorf("failed to list projects by team: %w", err)
 	}
@@ -77,7 +77,7 @@ func (s *ProjectService) ListUserProjects(limit int) (string, error) {
 		return "", fmt.Errorf("failed to get current user: %w", err)
 	}
 
-	projects, err := s.client.Projects.ListUserProjects(viewer.ID, limit)
+	projects, err := s.client.ListUserProjects(viewer.ID, limit)
 	if err != nil {
 		return "", fmt.Errorf("failed to list user projects: %w", err)
 	}
@@ -143,7 +143,7 @@ func (s *ProjectService) Create(input *CreateProjectInput) (string, error) {
 			return "", fmt.Errorf("failed to update project after creation: %w", err)
 		}
 		// Re-fetch to get updated project
-		project, err = s.client.Projects.GetProject(project.ID)
+		project, err = s.client.GetProject(project.ID)
 		if err != nil {
 			return "", fmt.Errorf("failed to get updated project: %w", err)
 		}
@@ -165,7 +165,7 @@ type UpdateProjectInput struct {
 // Update updates an existing project
 func (s *ProjectService) Update(projectID string, input *UpdateProjectInput) (string, error) {
 	// Build Linear client input
-	linearInput := linear.UpdateProjectInput{}
+	linearInput := projects.UpdateProjectInput{}
 
 	if input.Name != nil {
 		linearInput.Name = input.Name
@@ -196,7 +196,7 @@ func (s *ProjectService) Update(projectID string, input *UpdateProjectInput) (st
 	}
 
 	// Update project
-	project, err := s.client.Projects.UpdateProject(projectID, linearInput)
+	project, err := s.client.UpdateProject(projectID, linearInput)
 	if err != nil {
 		return "", fmt.Errorf("failed to update project: %w", err)
 	}

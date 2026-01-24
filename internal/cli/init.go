@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/joa23/linear-cli/internal/linear"
+	"github.com/joa23/linear-cli/internal/linear/core"
 	"github.com/joa23/linear-cli/internal/token"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -77,7 +78,7 @@ func runInit() error {
 	fmt.Println()
 
 	// Get selection
-	var selectedTeam linear.Team
+	var selectedTeam core.Team
 	if len(teams) == 1 {
 		selectedTeam = teams[0]
 		fmt.Printf("Using team: %s (%s)\n", selectedTeam.Name, selectedTeam.Key)
