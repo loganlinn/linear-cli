@@ -125,9 +125,9 @@ TIP: Use --format full for detailed output with descriptions.`,
 			case "cycles":
 				return searchCycles(cmd, textQuery, team, limit, formatStr)
 			case "projects":
-				return searchProjects(cmd, textQuery, limit, formatStr)
+				return searchProjects(cmd, textQuery, limit)
 			case "users":
-				return searchUsers(cmd, textQuery, team, limit, formatStr)
+				return searchUsers(cmd, textQuery, team, limit)
 			case "all":
 				return searchAll(cmd, textQuery, team, limit, formatStr)
 			default:
@@ -270,7 +270,8 @@ func searchCycles(cmd *cobra.Command, textQuery, team string, limit int, formatS
 }
 
 // searchProjects searches projects by name
-func searchProjects(cmd *cobra.Command, textQuery string, limit int, formatStr string) error {
+// Note: Uses default project format (no format customization available)
+func searchProjects(cmd *cobra.Command, textQuery string, limit int) error {
 	client, err := getLinearClient()
 	if err != nil {
 		return err
@@ -293,7 +294,8 @@ func searchProjects(cmd *cobra.Command, textQuery string, limit int, formatStr s
 }
 
 // searchUsers searches users by name/email
-func searchUsers(cmd *cobra.Command, textQuery, team string, limit int, formatStr string) error {
+// Note: Uses default user format (no format customization available)
+func searchUsers(cmd *cobra.Command, textQuery, team string, limit int) error {
 	client, err := getLinearClient()
 	if err != nil {
 		return err
@@ -327,32 +329,48 @@ func searchAll(cmd *cobra.Command, textQuery, team string, limit int, formatStr 
 	fmt.Printf("SEARCH RESULTS: \"%s\"\n", textQuery)
 	fmt.Println(generateSeparator("═", 50))
 
+	var errs []error
+
 	// Search issues
 	fmt.Println("\nISSUES")
 	fmt.Println(generateSeparator("─", 50))
 	if err := searchIssues(cmd, textQuery, team, "", 0, "", "", "", "", "", false, false, false, 0, limit, formatStr); err != nil {
-		fmt.Printf("Error searching issues: %v\n", err)
+		errs = append(errs, fmt.Errorf("issues: %w", err))
+		fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to search issues: %v\n", err)
 	}
 
 	// Search cycles
 	fmt.Println("\nCYCLES")
 	fmt.Println(generateSeparator("─", 50))
 	if err := searchCycles(cmd, textQuery, team, limit, formatStr); err != nil {
-		fmt.Printf("Error searching cycles: %v\n", err)
+		errs = append(errs, fmt.Errorf("cycles: %w", err))
+		fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to search cycles: %v\n", err)
 	}
 
 	// Search projects
 	fmt.Println("\nPROJECTS")
 	fmt.Println(generateSeparator("─", 50))
-	if err := searchProjects(cmd, textQuery, limit, formatStr); err != nil {
-		fmt.Printf("Error searching projects: %v\n", err)
+	if err := searchProjects(cmd, textQuery, limit); err != nil {
+		errs = append(errs, fmt.Errorf("projects: %w", err))
+		fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to search projects: %v\n", err)
 	}
 
 	// Search users
 	fmt.Println("\nUSERS")
 	fmt.Println(generateSeparator("─", 50))
-	if err := searchUsers(cmd, textQuery, team, limit, formatStr); err != nil {
-		fmt.Printf("Error searching users: %v\n", err)
+	if err := searchUsers(cmd, textQuery, team, limit); err != nil {
+		errs = append(errs, fmt.Errorf("users: %w", err))
+		fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to search users: %v\n", err)
+	}
+
+	// Return error if all searches failed
+	if len(errs) == 4 {
+		return fmt.Errorf("all searches failed")
+	}
+
+	// Warn if some searches failed
+	if len(errs) > 0 {
+		fmt.Fprintf(cmd.ErrOrStderr(), "\nWarning: %d search(es) failed\n", len(errs))
 	}
 
 	return nil

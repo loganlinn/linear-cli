@@ -25,7 +25,7 @@ type DepEdge struct {
 }
 
 func newDepsCmd() *cobra.Command {
-	var teamKey string
+	var teamID string
 
 	cmd := &cobra.Command{
 		Use:   "deps [issue-id]",
@@ -53,16 +53,16 @@ Detects and warns about circular dependencies.`,
 				return showIssueDeps(client, args[0])
 			}
 
-			if teamKey != "" {
+			if teamID != "" {
 				// Team mode
-				return showTeamDeps(client, teamKey)
+				return showTeamDeps(client, teamID)
 			}
 
 			return fmt.Errorf("provide an issue ID or use --team to show team dependencies")
 		},
 	}
 
-	cmd.Flags().StringVarP(&teamKey, "team", "t", "", TeamFlagDescription)
+	cmd.Flags().StringVarP(&teamID, "team", "t", "", TeamFlagDescription)
 
 	return cmd
 }
@@ -122,8 +122,8 @@ func showIssueDeps(client *linear.Client, issueID string) error {
 	return renderDependencyGraph(issue.Identifier, nodes, edges)
 }
 
-func showTeamDeps(client *linear.Client, teamKey string) error {
-	issues, err := client.Issues.GetTeamIssuesWithRelations(teamKey, 250)
+func showTeamDeps(client *linear.Client, teamID string) error {
+	issues, err := client.Issues.GetTeamIssuesWithRelations(teamID, 250)
 	if err != nil {
 		return fmt.Errorf("failed to get team issues: %w", err)
 	}
@@ -160,11 +160,11 @@ func showTeamDeps(client *linear.Client, teamKey string) error {
 	}
 
 	if len(edges) == 0 {
-		fmt.Printf("No dependencies found for team %s\n", teamKey)
+		fmt.Printf("No dependencies found for team %s\n", teamID)
 		return nil
 	}
 
-	return renderTeamDependencyGraph(teamKey, nodes, edges)
+	return renderTeamDependencyGraph(teamID, nodes, edges)
 }
 
 func renderDependencyGraph(rootID string, nodes map[string]*DepNode, edges []DepEdge) error {
@@ -244,11 +244,11 @@ func renderDependencyGraph(rootID string, nodes map[string]*DepNode, edges []Dep
 	return nil
 }
 
-func renderTeamDependencyGraph(teamKey string, nodes map[string]*DepNode, edges []DepEdge) error {
+func renderTeamDependencyGraph(teamID string, nodes map[string]*DepNode, edges []DepEdge) error {
 	var b strings.Builder
 
 	// Header
-	b.WriteString(fmt.Sprintf("DEPENDENCY GRAPH: Team %s\n", teamKey))
+	b.WriteString(fmt.Sprintf("DEPENDENCY GRAPH: Team %s\n", teamID))
 	b.WriteString(strings.Repeat("═", 50))
 	b.WriteString("\n")
 
