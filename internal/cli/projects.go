@@ -32,12 +32,12 @@ func newProjectsListCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List projects",
-		Long:  "List all projects, projects by team, or projects you're involved in.",
-		Example: `  # List all projects
+		Short: "List projects for a team",
+		Long:  "List projects for a specific team.",
+		Example: `  # List projects for team (uses .linear.yaml)
   linear projects list
 
-  # List projects for a specific team
+  # List projects for specific team
   linear projects list --team CEN
 
   # List projects you're involved in
@@ -56,20 +56,20 @@ func newProjectsListCmd() *cobra.Command {
 				limit = 25
 			}
 
-			// Get team from flag or config
-			if teamID == "" {
-				teamID = GetDefaultTeam()
-			}
-
 			var output string
 			if mine {
+				// --mine overrides team requirement
 				output, err = svc.ListUserProjects(limit)
-			} else if teamID != "" {
-				// Filter by team
-				output, err = svc.ListByTeam(teamID, limit)
 			} else {
-				// List all projects
-				output, err = svc.ListAll(limit)
+				// Get team from flag or config
+				if teamID == "" {
+					teamID = GetDefaultTeam()
+				}
+				if teamID == "" {
+					return fmt.Errorf("team is required. Use --team or run 'linear init' to set a default")
+				}
+
+				output, err = svc.ListByTeam(teamID, limit)
 			}
 			if err != nil {
 				return fmt.Errorf("failed to list projects: %w", err)
@@ -80,8 +80,8 @@ func newProjectsListCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&mine, "mine", false, "Only show projects you're involved in")
-	cmd.Flags().StringVarP(&teamID, "team", "t", "", "Filter by team (uses .linear.yaml if not specified)")
+	cmd.Flags().BoolVar(&mine, "mine", false, "Only show projects you're involved in (ignores team)")
+	cmd.Flags().StringVarP(&teamID, "team", "t", "", "Team key or ID (uses .linear.yaml if not specified)")
 	cmd.Flags().IntVarP(&limit, "limit", "n", 25, "Number of projects to return")
 
 	return cmd

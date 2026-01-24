@@ -13,7 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented team filtering for `linear projects list --team` command
 - Issue: Command showed warning "Team filtering for projects is not yet implemented"
 - Fix: Added `ListByTeam` method that queries projects via team relationship
-- Now supports filtering projects by team using `.linear.yaml` or `--team` flag
+- Removed unpredictable "smart routing" behavior - now requires team (from flag or `.linear.yaml`)
+- Behavior: flag → `.linear.yaml` → error (consistent with issues/cycles commands)
+- Exception: `--mine` flag bypasses team requirement to show user's projects
 - Example: `linear projects list --team CEN` shows only CEN team projects
 
 ## [1.2.3] - 2026-01-23
