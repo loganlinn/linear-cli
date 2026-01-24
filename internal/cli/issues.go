@@ -381,6 +381,7 @@ TIP: Run 'linear init' first to set default team.`,
 
 func newIssuesUpdateCmd() *cobra.Command {
 	var (
+		team        string
 		title       string
 		description string
 		state       string
@@ -415,6 +416,12 @@ func newIssuesUpdateCmd() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			issueID := args[0]
+
+			// Get team from flag or config (for cycle resolution)
+			if team == "" {
+				team = GetDefaultTeam()
+			}
+			// Note: team can still be "" if no .linear.yaml, will fallback to issue identifier
 
 			// Check if any updates provided (stdin counts as description update)
 			hasStdin := hasStdinPipe()
@@ -504,6 +511,9 @@ func newIssuesUpdateCmd() *cobra.Command {
 			if blockedBy != "" {
 				input.BlockedBy = parseCommaSeparated(blockedBy)
 			}
+			if team != "" {
+				input.TeamID = &team
+			}
 
 			svc, err := getIssueService()
 			if err != nil {
@@ -535,6 +545,7 @@ func newIssuesUpdateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&dependsOn, "depends-on", "", "Update dependencies (comma-separated issue IDs)")
 	cmd.Flags().StringVar(&blockedBy, "blocked-by", "", "Update blocked-by (comma-separated issue IDs)")
 	cmd.Flags().StringArrayVar(&attachFiles, "attach", nil, "File(s) to attach (can be used multiple times)")
+	cmd.Flags().StringVarP(&team, "team", "t", "", "Team context for cycle resolution (optional, uses .linear.yaml or issue identifier)")
 
 	return cmd
 }

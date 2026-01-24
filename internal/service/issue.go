@@ -450,11 +450,31 @@ func (s *IssueService) Update(identifier string, input *UpdateIssueInput) (strin
 		linearInput.TeamID = &teamID
 	}
 	if input.CycleID != nil {
-		// Need team ID for cycle resolution
-		teamID := ""
-		if input.TeamID != nil {
-			teamID, _ = s.client.ResolveTeamIdentifier(*input.TeamID)
+		// Resolve team ID with proper hierarchy:
+		// 1. Explicit team from input (--team flag or .linear.yaml)
+		// 2. Fallback to extracting from issue identifier
+		var teamID string
+		var err error
+
+		if input.TeamID != nil && *input.TeamID != "" {
+			// Use explicit team (from --team flag or .linear.yaml)
+			teamID, err = s.client.ResolveTeamIdentifier(*input.TeamID)
+			if err != nil {
+				return "", fmt.Errorf("could not resolve team '%s': %w", *input.TeamID, err)
+			}
+		} else {
+			// Fallback: extract from issue identifier
+			teamKey := extractTeamKeyFromIdentifier(issue.Identifier)
+			if teamKey == "" {
+				return "", fmt.Errorf("could not extract team from issue identifier '%s'. Use --team flag or run 'linear init'", issue.Identifier)
+			}
+			teamID, err = s.client.ResolveTeamIdentifier(teamKey)
+			if err != nil {
+				return "", fmt.Errorf("could not resolve team '%s': %w", teamKey, err)
+			}
 		}
+
+		// Now resolve cycle with team context
 		cycleID, err := s.client.ResolveCycleIdentifier(*input.CycleID, teamID)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve cycle '%s': %w", *input.CycleID, err)

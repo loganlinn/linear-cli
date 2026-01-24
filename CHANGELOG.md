@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2026-01-23
+
+### Fixed
+
+**Cycle Resolution Bug:**
+- Fixed `linear issues update` failing when setting cycle with `--cycle` flag
+- Issue: Command required explicit `--team` flag even when `.linear.yaml` config existed
+- Root cause: Update command didn't read team context from config or extract from issue identifier
+- Fix: Added proper team resolution hierarchy to match `create` command behavior:
+  1. Explicit `--team` flag (allows moving issues to different teams)
+  2. Default team from `.linear.yaml` config file
+  3. Automatic extraction from issue identifier (e.g., CEN-4322 → CEN team)
+- Example: `linear issues update CEN-4322 --cycle 66` now works without `--team` flag
+- Added `--team` flag to update command for explicit team override
+
 ## [1.2.2] - 2026-01-22
 
 ### Added
