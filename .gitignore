@@ -46,3 +46,6 @@ coverage.out
 
 # Marketing content (not for repo)
 marketing/
+
+# Internal planning documents (not for public repo)
+CODE_QUALITY_TASKS.md
