@@ -163,7 +163,7 @@ TIP: Use --format full for detailed output, --format minimal for concise output.
 	cmd.Flags().StringVarP(&cycle, "cycle", "c", "", "Filter by cycle (number, 'current', or 'next')")
 	cmd.Flags().StringVarP(&labels, "labels", "l", "", "Filter by labels (comma-separated)")
 	cmd.Flags().IntVarP(&limit, "limit", "n", 10, "Number of items (max 250)")
-	cmd.Flags().StringVarP(&formatStr, "format", "f", "compact", "Output format: compact|full|json")
+	cmd.Flags().StringVarP(&formatStr, "format", "f", "compact", "Output format: minimal|compact|full")
 
 	return cmd
 }

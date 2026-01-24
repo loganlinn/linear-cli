@@ -37,11 +37,6 @@ func TestRootCmdHasSubcommands(t *testing.T) {
 func TestRootCmdGlobalFlags(t *testing.T) {
 	cmd := NewRootCmd()
 
-	// Check for --format flag
-	formatFlag := cmd.PersistentFlags().Lookup("format")
-	require.NotNil(t, formatFlag)
-	assert.Equal(t, "table", formatFlag.DefValue)
-
 	// Check for --verbose flag
 	verboseFlag := cmd.PersistentFlags().Lookup("verbose")
 	require.NotNil(t, verboseFlag)

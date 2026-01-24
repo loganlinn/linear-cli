@@ -8,8 +8,7 @@ import (
 )
 
 var (
-	outputFormat string // global flag for output format (table, json, markdown)
-	verbose      bool   // global flag for verbose output
+	verbose bool // global flag for verbose output
 
 	// Version is set via ldflags at build time
 	Version = "dev"
@@ -130,7 +129,6 @@ Configuration:
 	rootCmd.SetUsageTemplate(customUsageTemplate)
 
 	// Global flags
-	rootCmd.PersistentFlags().StringVar(&outputFormat, "format", "table", "Output format (table, json, markdown)")
 	rootCmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Enable verbose output")
 
 	// Add subcommands - grouped logically
