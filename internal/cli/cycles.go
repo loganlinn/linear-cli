@@ -157,12 +157,8 @@ TIP: Run 'linear init' once to set default team, then use cycle numbers directly
 				_, err := strconv.Atoi(cycleID)
 				isNumber := err == nil
 				if isNumber {
-					return fmt.Errorf(`team context required for cycle numbers
-
-Run 'linear init' to set default team, or use --team flag:
-  linear cycles get %s --team CEN
-
-Alternatively, use cycle UUID instead of number.`, cycleID)
+					return fmt.Errorf("team context required for cycle number %s. "+
+						"Run 'linear init' to set default team, use --team flag, or use cycle UUID instead of number", cycleID)
 				}
 			}
 

@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/joa23/linear-cli/internal/linear"
@@ -152,10 +151,3 @@ func printNotLoggedIn() {
 	fmt.Println()
 }
 
-func getHomeDir() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "~"
-	}
-	return home
-}

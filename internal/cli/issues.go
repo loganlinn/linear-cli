@@ -798,7 +798,7 @@ func newIssuesDependenciesCmd() *cobra.Command {
 				return nil
 			}
 
-			fmt.Println(fmt.Sprintf("%v", deps))
+			fmt.Printf("%v\n", deps)
 			return nil
 		},
 	}
@@ -844,7 +844,7 @@ func newIssuesBlockedByCmd() *cobra.Command {
 				return nil
 			}
 
-			fmt.Println(fmt.Sprintf("%v", blocked))
+			fmt.Printf("%v\n", blocked)
 			return nil
 		},
 	}
@@ -883,7 +883,7 @@ func newIssuesBlockingCmd() *cobra.Command {
 				return nil
 			}
 
-			fmt.Println(fmt.Sprintf("%v", blocking))
+			fmt.Printf("%v\n", blocking)
 			return nil
 		},
 	}
