@@ -45,6 +45,26 @@ func (s *ProjectService) ListAll(limit int) (string, error) {
 	return s.formatter.ProjectList(projects, nil), nil
 }
 
+// ListByTeam lists all projects for a specific team
+func (s *ProjectService) ListByTeam(teamID string, limit int) (string, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+
+	// Resolve team identifier to UUID
+	resolvedTeamID, err := s.client.ResolveTeamIdentifier(teamID)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve team '%s': %w", teamID, err)
+	}
+
+	projects, err := s.client.Projects.ListByTeam(resolvedTeamID, limit)
+	if err != nil {
+		return "", fmt.Errorf("failed to list projects by team: %w", err)
+	}
+
+	return s.formatter.ProjectList(projects, nil), nil
+}
+
 // ListUserProjects lists projects that have issues assigned to the user
 func (s *ProjectService) ListUserProjects(limit int) (string, error) {
 	if limit <= 0 {

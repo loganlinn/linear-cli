@@ -33,17 +33,18 @@ func newProjectsListCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List projects",
-		Long:  "List all projects or projects you're involved in.",
+		Long:  "List all projects, projects by team, or projects you're involved in.",
 		Example: `  # List all projects
   linear projects list
+
+  # List projects for a specific team
+  linear projects list --team CEN
 
   # List projects you're involved in
   linear projects list --mine
 
   # List with custom limit
-  linear projects list --limit 50
-
-  # Note: --team flag is for API consistency but filtering by team is not yet supported`,
+  linear projects list --limit 50`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			svc, err := getProjectService()
 			if err != nil {
@@ -55,15 +56,19 @@ func newProjectsListCmd() *cobra.Command {
 				limit = 25
 			}
 
-			// Note: teamID flag is accepted for consistency but not yet implemented
-			if teamID != "" {
-				fmt.Println("Warning: Team filtering for projects is not yet implemented. Showing all projects.")
+			// Get team from flag or config
+			if teamID == "" {
+				teamID = GetDefaultTeam()
 			}
 
 			var output string
 			if mine {
 				output, err = svc.ListUserProjects(limit)
+			} else if teamID != "" {
+				// Filter by team
+				output, err = svc.ListByTeam(teamID, limit)
 			} else {
+				// List all projects
 				output, err = svc.ListAll(limit)
 			}
 			if err != nil {
@@ -76,7 +81,7 @@ func newProjectsListCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVar(&mine, "mine", false, "Only show projects you're involved in")
-	cmd.Flags().StringVarP(&teamID, "team", "t", "", "Team filter (not yet implemented)")
+	cmd.Flags().StringVarP(&teamID, "team", "t", "", "Filter by team (uses .linear.yaml if not specified)")
 	cmd.Flags().IntVarP(&limit, "limit", "n", 25, "Number of projects to return")
 
 	return cmd

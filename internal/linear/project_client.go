@@ -263,6 +263,71 @@ func (pc *ProjectClient) ListAllProjects(limit int) ([]Project, error) {
 	return response.Projects.Nodes, nil
 }
 
+// ListByTeam retrieves projects for a specific team
+// Why: Teams often have many projects. Filtering by team makes it easier
+// to find relevant projects without seeing all org-wide projects.
+func (pc *ProjectClient) ListByTeam(teamID string, limit int) ([]Project, error) {
+	// Validate input
+	if teamID == "" {
+		return nil, &ValidationError{Field: "teamID", Message: "teamID cannot be empty"}
+	}
+
+	if limit <= 0 {
+		limit = 50
+	}
+
+	const query = `
+		query ListProjectsByTeam($teamId: String!, $first: Int) {
+			team(id: $teamId) {
+				projects(first: $first) {
+					nodes {
+						id
+						name
+						description
+						content
+						state
+						createdAt
+						updatedAt
+					}
+				}
+			}
+		}
+	`
+
+	variables := map[string]interface{}{
+		"teamId": teamID,
+		"first":  limit,
+	}
+
+	var response struct {
+		Team struct {
+			Projects struct {
+				Nodes []Project `json:"nodes"`
+			} `json:"projects"`
+		} `json:"team"`
+	}
+
+	err := pc.base.executeRequest(query, variables, &response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list projects by team: %w", err)
+	}
+
+	// Extract metadata from content (or fallback to description)
+	for i := range response.Team.Projects.Nodes {
+		if response.Team.Projects.Nodes[i].Content != "" {
+			metadata, cleanContent := extractMetadataFromDescription(response.Team.Projects.Nodes[i].Content)
+			response.Team.Projects.Nodes[i].Metadata = metadata
+			response.Team.Projects.Nodes[i].Content = cleanContent
+		} else if response.Team.Projects.Nodes[i].Description != "" {
+			metadata, cleanDesc := extractMetadataFromDescription(response.Team.Projects.Nodes[i].Description)
+			response.Team.Projects.Nodes[i].Metadata = metadata
+			response.Team.Projects.Nodes[i].Description = cleanDesc
+		}
+	}
+
+	return response.Team.Projects.Nodes, nil
+}
+
 // ListUserProjects retrieves projects that have issues assigned to a specific user
 // Why: Users often want to see only projects they're actively working on.
 // This method filters projects based on issue assignments.
