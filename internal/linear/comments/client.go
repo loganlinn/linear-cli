@@ -2,7 +2,8 @@ package comments
 
 import (
 	"github.com/joa23/linear-cli/internal/linear/core"
-	"github.com/joa23/linear-cli/internal/linear/helpers"
+	"github.com/joa23/linear-cli/internal/linear/guidance"
+	"github.com/joa23/linear-cli/internal/linear/validation"
 	"fmt"
 )
 
@@ -26,13 +27,13 @@ func (cc *Client) CreateComment(issueID, body string) (*core.Comment, error) {
 	// Why: Both issue ID and comment body are required. Empty comments
 	// provide no value and would be rejected by the API.
 	if issueID == "" {
-		return nil, helpers.ValidationErrorWithExample("issueID", "cannot be empty",
+		return nil, guidance.ValidationErrorWithExample("issueID", "cannot be empty",
 			`// Get issue first, then add comment
 issue = linear_get_issue("LIN-123")
 linear_create_comment(issue.id, "This is my comment")`)
 	}
 	if body == "" {
-		return nil, helpers.ValidationErrorWithExample("body", "cannot be empty",
+		return nil, guidance.ValidationErrorWithExample("body", "cannot be empty",
 			`linear_create_comment(issueId, "Progress update: Completed authentication module")`)
 	}
 	
@@ -78,11 +79,11 @@ linear_create_comment(issue.id, "This is my comment")`)
 	
 	err := cc.base.ExecuteRequest(mutation, variables, &response)
 	if err != nil {
-		return nil, helpers.EnhanceGenericError("create comment", err)
+		return nil, guidance.EnhanceGenericError("create comment", err)
 	}
 	
 	if !response.CommentCreate.Success {
-		return nil, helpers.OperationFailedError("Create comment", "comment", []string{
+		return nil, guidance.OperationFailedError("Create comment", "comment", []string{
 			"Verify the issue ID exists using linear_get_issue",
 			"Check if you have permission to comment on this issue",
 			"Ensure the issue is not locked or archived",
@@ -408,7 +409,7 @@ func (cc *Client) AddReaction(targetID, emoji string) error {
 	if emoji == "" {
 		return &core.ValidationError{Field: "emoji", Message: "emoji cannot be empty"}
 	}
-	if !helpers.IsValidEmoji(emoji) {
+	if !validation.IsValidEmoji(emoji) {
 		return &core.ValidationError{Field: "emoji", Value: emoji, Reason: "must be a single valid emoji"}
 	}
 	

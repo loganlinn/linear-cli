@@ -2,7 +2,7 @@ package attachments
 
 import (
 	"github.com/joa23/linear-cli/internal/linear/core"
-	"github.com/joa23/linear-cli/internal/linear/helpers"
+	"github.com/joa23/linear-cli/internal/linear/guidance"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -106,7 +106,7 @@ const MCPSizeLimit = 1024 * 1024 // 1MB
 func (ac *Client) GetAttachment(attachmentURL string, format AttachmentFormat) (*AttachmentResponse, error) {
 	// Validate input
 	if attachmentURL == "" {
-		return nil, helpers.ValidationErrorWithExample("attachmentId", "cannot be empty", 
+		return nil, guidance.ValidationErrorWithExample("attachmentId", "cannot be empty",
 			`// First list issue attachments
 attachments = linear_list_issue_attachments("issue-id")
 // Then get a specific attachment using its URL

@@ -5,8 +5,8 @@ import (
 	"sort"
 
 	"github.com/joa23/linear-cli/internal/format"
-	"github.com/joa23/linear-cli/internal/linear/helpers"
 	"github.com/joa23/linear-cli/internal/linear/identifiers"
+	paginationutil "github.com/joa23/linear-cli/internal/linear/pagination"
 	"github.com/joa23/linear-cli/internal/linear/core"
 )
 
@@ -137,7 +137,7 @@ func (s *IssueService) ListAssigned(limit int, outputFormat format.Format) (stri
 // ListAssignedWithPagination lists assigned issues with offset-based pagination
 func (s *IssueService) ListAssignedWithPagination(pagination *core.PaginationInput) (string, error) {
 	// Validate and normalize pagination
-	pagination = helpers.ValidatePagination(pagination)
+	pagination = paginationutil.ValidatePagination(pagination)
 
 	// Get viewer ID
 	viewer, err := s.client.TeamClient().GetViewer()
@@ -154,7 +154,7 @@ func (s *IssueService) ListAssignedWithPagination(pagination *core.PaginationInp
 	// Use API-level sorting if supported (createdAt, updatedAt)
 	// Note: Linear's orderBy doesn't support direction, always returns desc
 	// For priority or asc direction, we'll do client-side sorting
-	orderBy := helpers.MapSortField(pagination.Sort)
+	orderBy := paginationutil.MapSortField(pagination.Sort)
 	if orderBy != "" && pagination.Direction == "desc" {
 		filter.OrderBy = orderBy
 	}

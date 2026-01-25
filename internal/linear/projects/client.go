@@ -5,7 +5,8 @@ import (
 	"strings"
 
 	"github.com/joa23/linear-cli/internal/linear/core"
-	"github.com/joa23/linear-cli/internal/linear/helpers"
+	"github.com/joa23/linear-cli/internal/linear/guidance"
+	"github.com/joa23/linear-cli/internal/linear/metadata"
 )
 
 // ProjectClient handles all project-related operations for the Linear API.
@@ -93,7 +94,7 @@ func (pc *Client) CreateProject(name, description, teamID string) (*core.Project
 	// Why: Projects can have metadata stored in descriptions. We extract
 	// it immediately after creation for consistent access.
 	if response.ProjectCreate.Project.Description != "" {
-		metadata, cleanDesc := helpers.ExtractMetadataFromDescription(response.ProjectCreate.Project.Description)
+		metadata, cleanDesc := metadata.ExtractMetadataFromDescription(response.ProjectCreate.Project.Description)
 		response.ProjectCreate.Project.Metadata = metadata
 		response.ProjectCreate.Project.Description = cleanDesc
 	}
@@ -154,7 +155,7 @@ func (pc *Client) GetProject(projectID string) (*core.Project, error) {
 	if err != nil {
 		// Check if this is a "not found" error and provide helpful guidance
 		if strings.Contains(err.Error(), "Entity not found") || strings.Contains(err.Error(), "Project") {
-			return nil, &helpers.ErrorWithGuidance{
+			return nil, &guidance.ErrorWithGuidance{
 				Operation: "Get project",
 				Reason:    fmt.Sprintf("project with ID '%s' not found", projectID),
 				Guidance: []string{
@@ -176,7 +177,7 @@ linear_get_project(correctProject.id)`),
 				OriginalErr: err,
 			}
 		}
-		return nil, helpers.EnhanceGenericError("get project", err)
+		return nil, guidance.EnhanceGenericError("get project", err)
 	}
 
 	// Check if project was found
@@ -192,12 +193,12 @@ linear_get_project(correctProject.id)`),
 	// Content is preferred over description as it has no character limit.
 	// Extracting it here ensures consistent access across all retrieval methods.
 	if response.Project.Content != "" {
-		metadata, cleanContent := helpers.ExtractMetadataFromDescription(response.Project.Content)
+		metadata, cleanContent := metadata.ExtractMetadataFromDescription(response.Project.Content)
 		response.Project.Metadata = metadata
 		response.Project.Content = cleanContent
 	} else if response.Project.Description != "" {
 		// Fallback: check description for backwards compatibility with old metadata storage
-		metadata, cleanDesc := helpers.ExtractMetadataFromDescription(response.Project.Description)
+		metadata, cleanDesc := metadata.ExtractMetadataFromDescription(response.Project.Description)
 		response.Project.Metadata = metadata
 		response.Project.Description = cleanDesc
 	}
@@ -252,12 +253,12 @@ func (pc *Client) ListAllProjects(limit int) ([]core.Project, error) {
 	// users can access metadata without additional calls.
 	for i := range response.Projects.Nodes {
 		if response.Projects.Nodes[i].Content != "" {
-			metadata, cleanContent := helpers.ExtractMetadataFromDescription(response.Projects.Nodes[i].Content)
+			metadata, cleanContent := metadata.ExtractMetadataFromDescription(response.Projects.Nodes[i].Content)
 			response.Projects.Nodes[i].Metadata = metadata
 			response.Projects.Nodes[i].Content = cleanContent
 		} else if response.Projects.Nodes[i].Description != "" {
 			// Fallback to description for backwards compatibility
-			metadata, cleanDesc := helpers.ExtractMetadataFromDescription(response.Projects.Nodes[i].Description)
+			metadata, cleanDesc := metadata.ExtractMetadataFromDescription(response.Projects.Nodes[i].Description)
 			response.Projects.Nodes[i].Metadata = metadata
 			response.Projects.Nodes[i].Description = cleanDesc
 		}
@@ -318,11 +319,11 @@ func (pc *Client) ListByTeam(teamID string, limit int) ([]core.Project, error) {
 	// Extract metadata from content (or fallback to description)
 	for i := range response.Team.Projects.Nodes {
 		if response.Team.Projects.Nodes[i].Content != "" {
-			metadata, cleanContent := helpers.ExtractMetadataFromDescription(response.Team.Projects.Nodes[i].Content)
+			metadata, cleanContent := metadata.ExtractMetadataFromDescription(response.Team.Projects.Nodes[i].Content)
 			response.Team.Projects.Nodes[i].Metadata = metadata
 			response.Team.Projects.Nodes[i].Content = cleanContent
 		} else if response.Team.Projects.Nodes[i].Description != "" {
-			metadata, cleanDesc := helpers.ExtractMetadataFromDescription(response.Team.Projects.Nodes[i].Description)
+			metadata, cleanDesc := metadata.ExtractMetadataFromDescription(response.Team.Projects.Nodes[i].Description)
 			response.Team.Projects.Nodes[i].Metadata = metadata
 			response.Team.Projects.Nodes[i].Description = cleanDesc
 		}
@@ -412,12 +413,12 @@ func (pc *Client) ListUserProjects(userID string, limit int) ([]core.Project, er
 	// Extract metadata from content (or fallback to description)
 	for i := range filteredProjects {
 		if filteredProjects[i].Content != "" {
-			metadata, cleanContent := helpers.ExtractMetadataFromDescription(filteredProjects[i].Content)
+			metadata, cleanContent := metadata.ExtractMetadataFromDescription(filteredProjects[i].Content)
 			filteredProjects[i].Metadata = metadata
 			filteredProjects[i].Content = cleanContent
 		} else if filteredProjects[i].Description != "" {
 			// Fallback to description for backwards compatibility
-			metadata, cleanDesc := helpers.ExtractMetadataFromDescription(filteredProjects[i].Description)
+			metadata, cleanDesc := metadata.ExtractMetadataFromDescription(filteredProjects[i].Description)
 			filteredProjects[i].Metadata = metadata
 			filteredProjects[i].Description = cleanDesc
 		}
@@ -595,7 +596,7 @@ func (pc *Client) UpdateProjectDescription(projectID, newContent string) error {
 	// needs to be injected back into the new content.
 	contentWithMetadata := newContent
 	if project.Metadata != nil && len(project.Metadata) > 0 {
-		contentWithMetadata = helpers.InjectMetadataIntoDescription(newContent, project.Metadata)
+		contentWithMetadata = metadata.InjectMetadataIntoDescription(newContent, project.Metadata)
 	}
 
 	const mutation = `
@@ -670,7 +671,7 @@ func (pc *Client) UpdateProjectMetadataKey(projectID, key string, value interfac
 	project.Metadata[key] = value
 
 	// Update the content with new metadata
-	contentWithMetadata := helpers.InjectMetadataIntoDescription(project.Content, project.Metadata)
+	contentWithMetadata := metadata.InjectMetadataIntoDescription(project.Content, project.Metadata)
 
 	const mutation = `
 		mutation UpdateProjectContent($projectId: String!, $content: String!) {
@@ -737,7 +738,7 @@ func (pc *Client) RemoveProjectMetadataKey(projectID, key string) error {
 		// metadata or remove the metadata section entirely if empty.
 		var contentWithMetadata string
 		if len(project.Metadata) > 0 {
-			contentWithMetadata = helpers.InjectMetadataIntoDescription(project.Content, project.Metadata)
+			contentWithMetadata = metadata.InjectMetadataIntoDescription(project.Content, project.Metadata)
 		} else {
 			// No metadata left, just use the clean content
 			contentWithMetadata = project.Content

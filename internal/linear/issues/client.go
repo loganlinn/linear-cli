@@ -6,7 +6,9 @@ import (
 	"strings"
 
 	"github.com/joa23/linear-cli/internal/linear/core"
-	"github.com/joa23/linear-cli/internal/linear/helpers"
+	"github.com/joa23/linear-cli/internal/linear/guidance"
+	"github.com/joa23/linear-cli/internal/linear/metadata"
+	"github.com/joa23/linear-cli/internal/linear/validation"
 )
 
 // IssueClient handles all issue-related operations for the Linear API.
@@ -29,11 +31,11 @@ func (ic *Client) CreateIssue(title, description, teamID string) (*core.Issue, e
 	// Why: Title and teamID are mandatory fields in Linear. Empty values would
 	// cause the API to reject the request, so we validate early for better errors.
 	if title == "" {
-		return nil, helpers.ValidationErrorWithExample("title", "cannot be empty",
+		return nil, guidance.ValidationErrorWithExample("title", "cannot be empty",
 			`linear_create_issue("Fix login bug", "Bug in authentication flow", "team-123")`)
 	}
 	if teamID == "" {
-		return nil, helpers.ValidationErrorWithExample("teamID", "cannot be empty",
+		return nil, guidance.ValidationErrorWithExample("teamID", "cannot be empty",
 			`// First, get available teams
 teams = linear_get_teams()
 // Then use a team ID
@@ -42,11 +44,11 @@ linear_create_issue("Task title", "Description", teams[0].id)`)
 
 	// Validate length limits
 	// Why: Linear enforces limits on title and description lengths
-	if err := helpers.ValidateStringLength(title, "title", helpers.MaxTitleLength); err != nil {
+	if err := validation.ValidateStringLength(title, "title", validation.MaxTitleLength); err != nil {
 		return nil, err
 	}
 	if description != "" {
-		if err := helpers.ValidateStringLength(description, "description", helpers.MaxDescriptionLength); err != nil {
+		if err := validation.ValidateStringLength(description, "description", validation.MaxDescriptionLength); err != nil {
 			return nil, err
 		}
 	}
@@ -134,7 +136,7 @@ linear_create_issue("Task title", "Description", teams[0].id)`)
 	// After creating an issue, we need to extract this metadata to populate
 	// the Metadata field in our Issue struct for consistent access.
 	if response.IssueCreate.Issue.Description != "" {
-		metadata, cleanDesc := helpers.ExtractMetadataFromDescription(response.IssueCreate.Issue.Description)
+		metadata, cleanDesc := metadata.ExtractMetadataFromDescription(response.IssueCreate.Issue.Description)
 		response.IssueCreate.Issue.Metadata = metadata
 		response.IssueCreate.Issue.Description = cleanDesc
 	}
@@ -253,7 +255,7 @@ func (ic *Client) GetIssue(issueID string) (*core.Issue, error) {
 	// as a separate field. This extraction ensures consistent metadata access
 	// regardless of how the issue was retrieved.
 	if response.Issue.Description != "" {
-		metadata, cleanDesc := helpers.ExtractMetadataFromDescription(response.Issue.Description)
+		metadata, cleanDesc := metadata.ExtractMetadataFromDescription(response.Issue.Description)
 		response.Issue.Metadata = metadata
 		response.Issue.Description = cleanDesc
 	}
@@ -358,7 +360,7 @@ func (ic *Client) getIssueWithProjectContextInternal(issueID string) (*core.Issu
 	
 	// Extract metadata from issue description
 	if response.Issue.Description != "" {
-		metadata, cleanDesc := helpers.ExtractMetadataFromDescription(response.Issue.Description)
+		metadata, cleanDesc := metadata.ExtractMetadataFromDescription(response.Issue.Description)
 		response.Issue.Metadata = metadata
 		response.Issue.Description = cleanDesc
 	}
@@ -367,7 +369,7 @@ func (ic *Client) getIssueWithProjectContextInternal(issueID string) (*core.Issu
 	// Why: Projects can also have metadata. When fetching project context,
 	// we want to ensure project metadata is also extracted and available.
 	if response.Issue.Project != nil && response.Issue.Project.Description != "" {
-		projectMetadata, cleanProjectDesc := helpers.ExtractMetadataFromDescription(response.Issue.Project.Description)
+		projectMetadata, cleanProjectDesc := metadata.ExtractMetadataFromDescription(response.Issue.Project.Description)
 		response.Issue.Project.Metadata = projectMetadata
 		response.Issue.Project.Description = cleanProjectDesc
 	}
@@ -461,7 +463,7 @@ func (ic *Client) getIssueWithParentContextInternal(issueID string) (*core.Issue
 	
 	// Extract metadata from issue description
 	if response.Issue.Description != "" {
-		metadata, cleanDesc := helpers.ExtractMetadataFromDescription(response.Issue.Description)
+		metadata, cleanDesc := metadata.ExtractMetadataFromDescription(response.Issue.Description)
 		response.Issue.Metadata = metadata
 		response.Issue.Description = cleanDesc
 	}
@@ -470,7 +472,7 @@ func (ic *Client) getIssueWithParentContextInternal(issueID string) (*core.Issue
 	// Why: Parent issues may contain metadata that provides context for
 	// sub-tasks. Extracting it ensures complete metadata visibility.
 	if response.Issue.Parent != nil && response.Issue.Parent.Description != "" {
-		parentMetadata, cleanParentDesc := helpers.ExtractMetadataFromDescription(response.Issue.Parent.Description)
+		parentMetadata, cleanParentDesc := metadata.ExtractMetadataFromDescription(response.Issue.Parent.Description)
 		response.Issue.Parent.Metadata = parentMetadata
 		response.Issue.Parent.Description = cleanParentDesc
 	}
@@ -535,13 +537,13 @@ func (ic *Client) UpdateIssueState(issueID, stateID string) error {
 		// are invalid. We want to provide helpful guidance to users.
 		if strings.Contains(err.Error(), "Entity not found in validateAccess: stateId") || 
 		   strings.Contains(err.Error(), "does not exist") && strings.Contains(err.Error(), "state") {
-			return helpers.InvalidStateIDError(stateID, err)
+			return guidance.InvalidStateIDError(stateID, err)
 		}
-		return helpers.EnhanceGenericError("update issue state", err)
+		return guidance.EnhanceGenericError("update issue state", err)
 	}
 	
 	if !response.IssueUpdate.Success {
-		return helpers.OperationFailedError("Update issue state", "issue", []string{
+		return guidance.OperationFailedError("Update issue state", "issue", []string{
 			"Verify the issue ID exists using linear_get_issue",
 			"Check if the state transition is allowed from current state",
 			"Ensure you have permission to update this issue",
@@ -699,7 +701,7 @@ func (ic *Client) ListAssignedIssues(limit int) ([]core.Issue, error) {
 	// consistent metadata access across all retrieval methods.
 	for i := range response.Issues.Nodes {
 		if response.Issues.Nodes[i].Description != "" {
-			metadata, cleanDesc := helpers.ExtractMetadataFromDescription(response.Issues.Nodes[i].Description)
+			metadata, cleanDesc := metadata.ExtractMetadataFromDescription(response.Issues.Nodes[i].Description)
 			response.Issues.Nodes[i].Metadata = metadata
 			response.Issues.Nodes[i].Description = cleanDesc
 		}
@@ -1108,7 +1110,7 @@ func (ic *Client) UpdateIssueDescription(issueID, newDescription string) error {
 	// current description. We need to inject this back into the new description.
 	descriptionWithMetadata := newDescription
 	if issue.Metadata != nil && len(issue.Metadata) > 0 {
-		descriptionWithMetadata = helpers.InjectMetadataIntoDescription(newDescription, issue.Metadata)
+		descriptionWithMetadata = metadata.InjectMetadataIntoDescription(newDescription, issue.Metadata)
 	}
 	
 	const mutation = `
@@ -1155,7 +1157,7 @@ func (ic *Client) UpdateIssueMetadataKey(issueID, key string, value interface{})
 	if key == "" {
 		return &core.ValidationError{Field: "key", Message: "key cannot be empty"}
 	}
-	if !helpers.IsValidMetadataKey(key) {
+	if !validation.IsValidMetadataKey(key) {
 		return &core.ValidationError{Field: "key", Value: key, Reason: "must be alphanumeric with underscores or hyphens, starting with letter or underscore"}
 	}
 
@@ -1178,7 +1180,7 @@ func (ic *Client) UpdateIssueMetadataKey(issueID, key string, value interface{})
 	// Update the description with new metadata
 	// Why: Metadata is stored in the description field. We need to
 	// inject the updated metadata back into the description.
-	descriptionWithMetadata := helpers.InjectMetadataIntoDescription(issue.Description, issue.Metadata)
+	descriptionWithMetadata := metadata.InjectMetadataIntoDescription(issue.Description, issue.Metadata)
 	
 	const mutation = `
 		mutation UpdateIssueDescription($issueId: String!, $description: String!) {
@@ -1252,7 +1254,7 @@ func (ic *Client) RemoveIssueMetadataKey(issueID, key string) error {
 	// with the remaining metadata, or remove metadata entirely if empty.
 	var descriptionWithMetadata string
 	if len(issue.Metadata) > 0 {
-		descriptionWithMetadata = helpers.InjectMetadataIntoDescription(issue.Description, issue.Metadata)
+		descriptionWithMetadata = metadata.InjectMetadataIntoDescription(issue.Description, issue.Metadata)
 	} else {
 		// No metadata left, just use the clean description
 		descriptionWithMetadata = issue.Description
@@ -1348,7 +1350,7 @@ func (ic *Client) GetIssueSimplified(issueID string) (*core.Issue, error) {
 	
 	// Extract metadata from description
 	if response.Issue.Description != "" {
-		metadata, cleanDesc := helpers.ExtractMetadataFromDescription(response.Issue.Description)
+		metadata, cleanDesc := metadata.ExtractMetadataFromDescription(response.Issue.Description)
 		response.Issue.Metadata = metadata
 		response.Issue.Description = cleanDesc
 	}
@@ -1411,7 +1413,7 @@ func (ic *Client) UpdateIssue(issueID string, input core.UpdateIssueInput) (*cor
 		
 		// Preserve metadata in the new description
 		if issue.Metadata != nil && len(issue.Metadata) > 0 {
-			descWithMetadata := helpers.InjectMetadataIntoDescription(*input.Description, issue.Metadata)
+			descWithMetadata := metadata.InjectMetadataIntoDescription(*input.Description, issue.Metadata)
 			input.Description = &descWithMetadata
 		}
 	}
@@ -1495,7 +1497,7 @@ func (ic *Client) UpdateIssue(issueID string, input core.UpdateIssueInput) (*cor
 	
 	// Extract metadata from description if present
 	if response.IssueUpdate.Issue.Description != "" {
-		metadata, cleanDesc := helpers.ExtractMetadataFromDescription(response.IssueUpdate.Issue.Description)
+		metadata, cleanDesc := metadata.ExtractMetadataFromDescription(response.IssueUpdate.Issue.Description)
 		response.IssueUpdate.Issue.Metadata = metadata
 		response.IssueUpdate.Issue.Description = cleanDesc
 	}
@@ -1736,7 +1738,7 @@ func (ic *Client) ListAllIssues(filter *core.IssueFilter) (*core.ListAllIssuesRe
 
 		// Extract metadata from description
 		if issue.Description != "" {
-			metadata, cleanDesc := helpers.ExtractMetadataFromDescription(issue.Description)
+			metadata, cleanDesc := metadata.ExtractMetadataFromDescription(issue.Description)
 			if len(metadata) > 0 {
 				issue.Metadata = &metadata
 			}
@@ -1745,7 +1747,7 @@ func (ic *Client) ListAllIssues(filter *core.IssueFilter) (*core.ListAllIssuesRe
 
 		// Extract metadata from project description if present
 		if issue.Project != nil && issue.Project.Description != "" {
-			projectMetadata, cleanProjectDesc := helpers.ExtractMetadataFromDescription(issue.Project.Description)
+			projectMetadata, cleanProjectDesc := metadata.ExtractMetadataFromDescription(issue.Project.Description)
 			issue.Project.Metadata = projectMetadata
 			issue.Project.Description = cleanProjectDesc
 		}
@@ -1851,7 +1853,7 @@ func buildOrderByObject(field, direction string) map[string]interface{} {
 func (ic *Client) ListIssueAttachments(issueID string) ([]core.Attachment, error) {
 	// Validate input
 	if issueID == "" {
-		return nil, helpers.ValidationErrorWithExample("issueID", "cannot be empty", 
+		return nil, guidance.ValidationErrorWithExample("issueID", "cannot be empty", 
 			`// First get an issue ID
 issue = linear_get_issue("some-issue-id")
 // Then list its attachments

@@ -1,8 +1,9 @@
 package linear
 
 import (
-	"github.com/joa23/linear-cli/internal/linear/helpers"
 	"github.com/joa23/linear-cli/internal/linear/core"
+	"github.com/joa23/linear-cli/internal/linear/guidance"
+	"github.com/joa23/linear-cli/internal/linear/identifiers"
 
 	"fmt"
 	"strings"
@@ -47,7 +48,7 @@ func (r *Resolver) ResolveUser(nameOrEmail string) (string, error) {
 	}
 
 	// Check if it's an email
-	if helpers.IsEmail(nameOrEmail) {
+	if identifiers.IsEmail(nameOrEmail) {
 		return r.resolveUserByEmail(nameOrEmail)
 	}
 
@@ -133,7 +134,7 @@ func (r *Resolver) resolveUserByName(name string) (string, error) {
 			suggestions = append(suggestions, fmt.Sprintf("%s (%s)", user.Name, user.Email))
 		}
 
-		return "", &helpers.ErrorWithGuidance{
+		return "", &guidance.ErrorWithGuidance{
 			Operation: "Resolve user",
 			Reason:    fmt.Sprintf("multiple users match '%s'", name),
 			Guidance: []string{
@@ -239,7 +240,7 @@ func (r *Resolver) ResolveIssue(identifier string) (string, error) {
 	}
 
 	// Validate format
-	if !helpers.IsIssueIdentifier(identifier) {
+	if !identifiers.IsIssueIdentifier(identifier) {
 		return "", &core.ValidationError{
 			Field:  "identifier",
 			Value:  identifier,
@@ -383,7 +384,7 @@ func (r *Resolver) resolveCycleName(name string, teamID string) (string, error) 
 			suggestions = append(suggestions, fmt.Sprintf("#%d: %s", cycle.Number, cycle.Name))
 		}
 
-		return "", &helpers.ErrorWithGuidance{
+		return "", &guidance.ErrorWithGuidance{
 			Operation: "Resolve cycle",
 			Reason:    fmt.Sprintf("multiple cycles match '%s'", name),
 			Guidance: []string{

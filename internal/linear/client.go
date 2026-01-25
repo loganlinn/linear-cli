@@ -10,7 +10,7 @@ import (
 	"github.com/joa23/linear-cli/internal/linear/comments"
 	"github.com/joa23/linear-cli/internal/linear/core"
 	"github.com/joa23/linear-cli/internal/linear/cycles"
-	"github.com/joa23/linear-cli/internal/linear/helpers"
+	"github.com/joa23/linear-cli/internal/linear/identifiers"
 	"github.com/joa23/linear-cli/internal/linear/issues"
 	"github.com/joa23/linear-cli/internal/linear/projects"
 	"github.com/joa23/linear-cli/internal/linear/teams"
@@ -215,7 +215,7 @@ func (c *Client) TeamClient() *teams.Client {
 func (c *Client) CreateIssue(title, description, teamKeyOrName string) (*core.Issue, error) {
 	// Resolve team name/key to UUID if needed
 	teamID := teamKeyOrName
-	if !helpers.IsUUID(teamKeyOrName) {
+	if !identifiers.IsUUID(teamKeyOrName) {
 		resolvedID, err := c.resolver.ResolveTeam(teamKeyOrName)
 		if err != nil {
 			return nil, err
@@ -234,7 +234,7 @@ func (c *Client) GetIssue(identifierOrID string) (*core.Issue, error) {
 	// Linear's issue(id:) query accepts UUIDs but not identifiers,
 	// so we use SearchIssuesEnhanced with identifier filter for identifiers
 	issueID := identifierOrID
-	if helpers.IsIssueIdentifier(identifierOrID) {
+	if identifiers.IsIssueIdentifier(identifierOrID) {
 		resolvedID, err := c.resolver.ResolveIssue(identifierOrID)
 		if err != nil {
 			return nil, err
@@ -264,7 +264,7 @@ func (c *Client) GetIssueWithParentContext(issueID string) (*core.Issue, error) 
 func (c *Client) UpdateIssueState(identifierOrID, stateID string) error {
 	// Resolve issue identifier to UUID if needed
 	issueID := identifierOrID
-	if helpers.IsIssueIdentifier(identifierOrID) {
+	if identifiers.IsIssueIdentifier(identifierOrID) {
 		resolvedID, err := c.resolver.ResolveIssue(identifierOrID)
 		if err != nil {
 			return err
@@ -278,7 +278,7 @@ func (c *Client) UpdateIssueState(identifierOrID, stateID string) error {
 func (c *Client) AssignIssue(identifierOrID, assigneeNameOrEmail string) error {
 	// Resolve issue identifier to UUID if needed
 	issueID := identifierOrID
-	if helpers.IsIssueIdentifier(identifierOrID) {
+	if identifiers.IsIssueIdentifier(identifierOrID) {
 		resolvedID, err := c.resolver.ResolveIssue(identifierOrID)
 		if err != nil {
 			return err
@@ -289,7 +289,7 @@ func (c *Client) AssignIssue(identifierOrID, assigneeNameOrEmail string) error {
 	// Resolve assignee name/email to UUID if needed
 	// Empty string is allowed for unassignment
 	assigneeID := assigneeNameOrEmail
-	if assigneeNameOrEmail != "" && !helpers.IsUUID(assigneeNameOrEmail) {
+	if assigneeNameOrEmail != "" && !identifiers.IsUUID(assigneeNameOrEmail) {
 		resolvedID, err := c.resolver.ResolveUser(assigneeNameOrEmail)
 		if err != nil {
 			return err
@@ -336,7 +336,7 @@ func (c *Client) GetIssueWithRelations(identifier string) (*core.IssueWithRelati
 func (c *Client) UpdateIssue(identifierOrID string, input core.UpdateIssueInput) (*core.Issue, error) {
 	// Resolve issue identifier to UUID if needed
 	issueID := identifierOrID
-	if helpers.IsIssueIdentifier(identifierOrID) {
+	if identifiers.IsIssueIdentifier(identifierOrID) {
 		resolvedID, err := c.resolver.ResolveIssue(identifierOrID)
 		if err != nil {
 			return nil, err
@@ -345,7 +345,7 @@ func (c *Client) UpdateIssue(identifierOrID string, input core.UpdateIssueInput)
 	}
 
 	// Resolve AssigneeID (name/email to UUID)
-	if input.AssigneeID != nil && *input.AssigneeID != "" && !helpers.IsUUID(*input.AssigneeID) {
+	if input.AssigneeID != nil && *input.AssigneeID != "" && !identifiers.IsUUID(*input.AssigneeID) {
 		resolvedID, err := c.resolver.ResolveUser(*input.AssigneeID)
 		if err != nil {
 			return nil, err
@@ -354,7 +354,7 @@ func (c *Client) UpdateIssue(identifierOrID string, input core.UpdateIssueInput)
 	}
 
 	// Resolve ParentID (identifier to UUID)
-	if input.ParentID != nil && *input.ParentID != "" && helpers.IsIssueIdentifier(*input.ParentID) {
+	if input.ParentID != nil && *input.ParentID != "" && identifiers.IsIssueIdentifier(*input.ParentID) {
 		resolvedID, err := c.resolver.ResolveIssue(*input.ParentID)
 		if err != nil {
 			return nil, err
@@ -363,7 +363,7 @@ func (c *Client) UpdateIssue(identifierOrID string, input core.UpdateIssueInput)
 	}
 
 	// Resolve TeamID (name/key to UUID)
-	if input.TeamID != nil && *input.TeamID != "" && !helpers.IsUUID(*input.TeamID) {
+	if input.TeamID != nil && *input.TeamID != "" && !identifiers.IsUUID(*input.TeamID) {
 		resolvedID, err := c.resolver.ResolveTeam(*input.TeamID)
 		if err != nil {
 			return nil, err
@@ -385,7 +385,7 @@ func (c *Client) ListAllIssues(filter *core.IssueFilter) (*core.ListAllIssuesRes
 func (c *Client) CreateProject(name, description, teamKeyOrName string) (*core.Project, error) {
 	// Resolve team name/key to UUID if needed
 	teamID := teamKeyOrName
-	if !helpers.IsUUID(teamKeyOrName) {
+	if !identifiers.IsUUID(teamKeyOrName) {
 		resolvedID, err := c.resolver.ResolveTeam(teamKeyOrName)
 		if err != nil {
 			return nil, err
@@ -451,7 +451,7 @@ func (c *Client) GetCycle(cycleID string) (*core.Cycle, error) {
 func (c *Client) GetActiveCycle(teamKeyOrName string) (*core.Cycle, error) {
 	// Resolve team name/key to UUID if needed
 	teamID := teamKeyOrName
-	if !helpers.IsUUID(teamKeyOrName) {
+	if !identifiers.IsUUID(teamKeyOrName) {
 		resolvedID, err := c.resolver.ResolveTeam(teamKeyOrName)
 		if err != nil {
 			return nil, err
@@ -463,7 +463,7 @@ func (c *Client) GetActiveCycle(teamKeyOrName string) (*core.Cycle, error) {
 
 func (c *Client) ListCycles(filter *core.CycleFilter) (*core.CycleSearchResult, error) {
 	// Resolve team name/key to UUID if needed
-	if filter != nil && filter.TeamID != "" && !helpers.IsUUID(filter.TeamID) {
+	if filter != nil && filter.TeamID != "" && !identifiers.IsUUID(filter.TeamID) {
 		resolvedID, err := c.resolver.ResolveTeam(filter.TeamID)
 		if err != nil {
 			return nil, err
@@ -475,7 +475,7 @@ func (c *Client) ListCycles(filter *core.CycleFilter) (*core.CycleSearchResult, 
 
 func (c *Client) CreateCycle(input *core.CreateCycleInput) (*core.Cycle, error) {
 	// Resolve team name/key to UUID if needed
-	if input != nil && input.TeamID != "" && !helpers.IsUUID(input.TeamID) {
+	if input != nil && input.TeamID != "" && !identifiers.IsUUID(input.TeamID) {
 		resolvedID, err := c.resolver.ResolveTeam(input.TeamID)
 		if err != nil {
 			return nil, err
@@ -522,7 +522,7 @@ func (c *Client) GetTeams() ([]core.Team, error) {
 func (c *Client) GetTeam(keyOrName string) (*core.Team, error) {
 	// Resolve team key/name to UUID if needed
 	teamID := keyOrName
-	if !helpers.IsUUID(keyOrName) {
+	if !identifiers.IsUUID(keyOrName) {
 		resolvedID, err := c.resolver.ResolveTeam(keyOrName)
 		if err != nil {
 			return nil, err
