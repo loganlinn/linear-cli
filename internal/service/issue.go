@@ -6,6 +6,7 @@ import (
 
 	"github.com/joa23/linear-cli/internal/format"
 	"github.com/joa23/linear-cli/internal/linear/helpers"
+	"github.com/joa23/linear-cli/internal/linear/identifiers"
 	"github.com/joa23/linear-cli/internal/linear/core"
 )
 
@@ -407,9 +408,9 @@ func (s *IssueService) Update(identifier string, input *UpdateIssueInput) (strin
 	// Resolve state if provided
 	if input.StateID != nil {
 		// Extract team key from issue identifier and resolve to team ID
-		teamKey := extractTeamKeyFromIdentifier(issue.Identifier)
-		if teamKey == "" {
-			return "", fmt.Errorf("could not extract team from issue identifier '%s'", issue.Identifier)
+		teamKey, _, err := identifiers.ParseIssueIdentifier(issue.Identifier)
+		if err != nil {
+			return "", fmt.Errorf("invalid issue identifier '%s': %w", issue.Identifier, err)
 		}
 		teamID, err := s.client.ResolveTeamIdentifier(teamKey)
 		if err != nil {
@@ -465,9 +466,9 @@ func (s *IssueService) Update(identifier string, input *UpdateIssueInput) (strin
 			}
 		} else {
 			// Fallback: extract from issue identifier
-			teamKey := extractTeamKeyFromIdentifier(issue.Identifier)
-			if teamKey == "" {
-				return "", fmt.Errorf("could not extract team from issue identifier '%s'. Use --team flag or run 'linear init'", issue.Identifier)
+			teamKey, _, err := identifiers.ParseIssueIdentifier(issue.Identifier)
+			if err != nil {
+				return "", fmt.Errorf("invalid issue identifier '%s': %w. Use --team flag or run 'linear init'", issue.Identifier, err)
 			}
 			teamID, err = s.client.ResolveTeamIdentifier(teamKey)
 			if err != nil {
@@ -572,23 +573,6 @@ func (s *IssueService) GetIssueID(identifier string) (string, error) {
 		return "", fmt.Errorf("failed to get issue %s: %w", identifier, err)
 	}
 	return issue.ID, nil
-}
-
-// extractTeamKeyFromIdentifier extracts the team key from an issue identifier
-// e.g., "CEN-123" -> "CEN"
-func extractTeamKeyFromIdentifier(identifier string) string {
-	parts := fmt.Sprintf("%s", identifier)
-	idx := 0
-	for i, c := range parts {
-		if c == '-' {
-			idx = i
-			break
-		}
-	}
-	if idx > 0 {
-		return parts[:idx]
-	}
-	return ""
 }
 
 // resolveStateID resolves a state name to a valid state ID

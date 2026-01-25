@@ -1,4 +1,4 @@
-package helpers
+package pagination
 
 import (
 	"github.com/joa23/linear-cli/internal/linear/core"

@@ -1,4 +1,4 @@
-package helpers
+package validation
 
 import (
 	"github.com/joa23/linear-cli/internal/linear/core"

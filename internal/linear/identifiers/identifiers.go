@@ -1,4 +1,4 @@
-package helpers
+package identifiers
 
 import (
 	"github.com/joa23/linear-cli/internal/linear/core"
@@ -14,7 +14,7 @@ var issueIdentifierRegex = regexp.MustCompile(`^[A-Z]+-\d+$`)
 // Email pattern: basic email validation
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 
-// isIssueIdentifier checks if a string matches Linear's issue identifier format
+// IsIssueIdentifier checks if a string matches Linear's issue identifier format
 // Valid format: UPPERCASE-NUMBER (e.g., CEN-123, ABC-1)
 //
 // Why: Issue identifiers are the human-readable way to reference issues.
@@ -23,11 +23,12 @@ func IsIssueIdentifier(s string) bool {
 	return issueIdentifierRegex.MatchString(s)
 }
 
-// parseIssueIdentifier extracts the team key and issue number from an identifier
+// ParseIssueIdentifier extracts the team key and issue number from an identifier
 // Returns the team key (e.g., "CEN"), the number (e.g., "123"), and any error
 //
-// Why: We need to extract components for searching or validation purposes.
-func parseIssueIdentifier(s string) (teamKey string, number string, error error) {
+// Exported in Phase 3 to eliminate duplication in service layer.
+// Previously was unexported parseIssueIdentifier in helpers package.
+func ParseIssueIdentifier(s string) (teamKey string, number string, error error) {
 	if !IsIssueIdentifier(s) {
 		return "", "", &core.ValidationError{
 			Field:  "identifier",
@@ -49,7 +50,7 @@ func parseIssueIdentifier(s string) (teamKey string, number string, error error)
 	return parts[0], parts[1], nil
 }
 
-// isEmail checks if a string is a valid email address
+// IsEmail checks if a string is a valid email address
 //
 // Why: Users can be identified by email, so we need to detect email format
 // to route to the correct resolution method.
@@ -57,7 +58,7 @@ func IsEmail(s string) bool {
 	return emailRegex.MatchString(s)
 }
 
-// isUUID checks if a string is a UUID format
+// IsUUID checks if a string is a UUID format
 // UUIDs: 8-4-4-4-12 format (e.g., "550e8400-e29b-41d4-a716-446655440000")
 //
 // Why: We need to detect UUIDs to avoid unnecessary resolution lookups.
