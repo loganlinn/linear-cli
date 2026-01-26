@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-01-26
+
+### Changed
+
+**Priority Flag Now Accepts String Values:**
+- `--priority` flag now accepts both integers (0-4) and names (none/urgent/high/normal/low)
+- Example: `--priority high` instead of `--priority 2`
+- Works for `create`, `update`, and `list` commands
+- Backwards compatible: numeric values still work
+
 ## [1.4.0] - 2026-01-26
 
 ### Fixed

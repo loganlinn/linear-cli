@@ -121,6 +121,40 @@ func looksLikeCycleNumber(s string) bool {
 	return err == nil
 }
 
+// parsePriority parses a priority string that can be either:
+// - An integer: "0", "1", "2", "3", "4"
+// - A name: "none", "urgent", "high", "normal", "low"
+// Returns the priority integer (0-4) or an error
+func parsePriority(s string) (int, error) {
+	if s == "" {
+		return 0, nil
+	}
+
+	// Try parsing as integer first
+	if p, err := strconv.Atoi(s); err == nil {
+		if p < 0 || p > 4 {
+			return 0, fmt.Errorf("priority must be 0-4, got %d", p)
+		}
+		return p, nil
+	}
+
+	// Parse as name (case-insensitive)
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "none", "no":
+		return 0, nil
+	case "urgent", "critical":
+		return 1, nil
+	case "high":
+		return 2, nil
+	case "normal", "medium":
+		return 3, nil
+	case "low":
+		return 4, nil
+	default:
+		return 0, fmt.Errorf("invalid priority '%s': use 0-4 or none/urgent/high/normal/low", s)
+	}
+}
+
 // Context key type for dependencies injection
 type depsKey string
 

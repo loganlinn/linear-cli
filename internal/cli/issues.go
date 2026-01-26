@@ -39,7 +39,7 @@ func newIssuesListCmd() *cobra.Command {
 	var (
 		teamID     string
 		state      string
-		priority   int
+		priority   string
 		assignee   string
 		cycle      string
 		labels     string
@@ -138,8 +138,12 @@ TIP: Use --format full for detailed output, --format minimal for concise output.
 			if state != "" {
 				filters.StateIDs = []string{state}
 			}
-			if cmd.Flags().Changed("priority") {
-				filters.Priority = &priority
+			if priority != "" {
+				p, err := parsePriority(priority)
+				if err != nil {
+					return err
+				}
+				filters.Priority = &p
 			}
 			if assignee != "" {
 				filters.AssigneeID = assignee
@@ -163,7 +167,7 @@ TIP: Use --format full for detailed output, --format minimal for concise output.
 
 	cmd.Flags().StringVarP(&teamID, "team", "t", "", TeamFlagDescription)
 	cmd.Flags().StringVar(&state, "state", "", "Filter by workflow state (e.g., 'In Progress', 'Backlog')")
-	cmd.Flags().IntVar(&priority, "priority", 0, "Filter by priority (0=none, 1=urgent, 2=high, 3=normal, 4=low)")
+	cmd.Flags().StringVar(&priority, "priority", "", "Filter by priority: 0-4 or none/urgent/high/normal/low")
 	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Filter by assignee (email or 'me')")
 	cmd.Flags().StringVarP(&cycle, "cycle", "c", "", "Filter by cycle (number, 'current', or 'next')")
 	cmd.Flags().StringVarP(&labels, "labels", "l", "", "Filter by labels (comma-separated)")
@@ -233,7 +237,7 @@ func newIssuesCreateCmd() *cobra.Command {
 		team        string
 		description string
 		state       string
-		priority    int
+		priority    string
 		estimate    float64
 		labels      string
 		cycle       string
@@ -341,8 +345,12 @@ TIP: Run 'linear init' first to set default team.`,
 			if state != "" {
 				input.StateID = state
 			}
-			if cmd.Flags().Changed("priority") {
-				input.Priority = &priority
+			if priority != "" {
+				p, err := parsePriority(priority)
+				if err != nil {
+					return err
+				}
+				input.Priority = &p
 			}
 			if estimate > 0 {
 				input.Estimate = &estimate
@@ -386,7 +394,7 @@ TIP: Run 'linear init' first to set default team.`,
 	cmd.Flags().StringVarP(&team, "team", "t", "", TeamFlagDescription)
 	cmd.Flags().StringVarP(&description, "description", "d", "", "Issue description (or pipe to stdin)")
 	cmd.Flags().StringVarP(&state, "state", "s", "", "Workflow state name (e.g., 'In Progress', 'Backlog')")
-	cmd.Flags().IntVarP(&priority, "priority", "p", 0, "Priority 0-4 (0=none, 1=urgent, 4=low)")
+	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Priority: 0-4 or none/urgent/high/normal/low")
 	cmd.Flags().Float64VarP(&estimate, "estimate", "e", 0, "Story points estimate")
 	cmd.Flags().StringVarP(&labels, "labels", "l", "", "Comma-separated label names/IDs")
 	cmd.Flags().StringVarP(&cycle, "cycle", "c", "", "Cycle number or name (e.g., 'current', 'next')")
@@ -488,9 +496,9 @@ func newIssuesUpdateCmd() *cobra.Command {
 				input.StateID = &state
 			}
 			if priority != "" {
-				p, err := strconv.Atoi(priority)
+				p, err := parsePriority(priority)
 				if err != nil {
-					return fmt.Errorf("invalid priority: %w", err)
+					return err
 				}
 				input.Priority = &p
 			}
@@ -543,7 +551,7 @@ func newIssuesUpdateCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&title, "title", "T", "", "Update issue title")
 	cmd.Flags().StringVarP(&description, "description", "d", "", "Update description (or pipe to stdin)")
 	cmd.Flags().StringVarP(&state, "state", "s", "", "Update workflow state name (e.g., 'In Progress', 'Backlog')")
-	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Update priority 0-4 (0=none, 1=urgent, 4=low)")
+	cmd.Flags().StringVarP(&priority, "priority", "p", "", "Priority: 0-4 or none/urgent/high/normal/low")
 	cmd.Flags().StringVarP(&estimate, "estimate", "e", "", "Update story points estimate")
 	cmd.Flags().StringVarP(&labels, "labels", "l", "", "Update labels (comma-separated)")
 	cmd.Flags().StringVarP(&cycle, "cycle", "c", "", "Update cycle number or name")
