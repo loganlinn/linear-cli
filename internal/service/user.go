@@ -29,7 +29,7 @@ type UserFilters struct {
 	After      string
 }
 
-// GetViewer returns the current authenticated user
+// GetViewer returns the current authenticated user (legacy method)
 func (s *UserService) GetViewer() (string, error) {
 	viewer, err := s.client.TeamClient().GetViewer()
 	if err != nil {
@@ -39,7 +39,17 @@ func (s *UserService) GetViewer() (string, error) {
 	return s.formatter.User(viewer), nil
 }
 
-// Get retrieves a single user by identifier (email, name, or ID)
+// GetViewerWithOutput returns the current user with new renderer architecture
+func (s *UserService) GetViewerWithOutput(verbosity format.Verbosity, outputType format.OutputType) (string, error) {
+	viewer, err := s.client.TeamClient().GetViewer()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current user: %w", err)
+	}
+
+	return s.formatter.RenderUser(viewer, verbosity, outputType), nil
+}
+
+// Get retrieves a single user by identifier (email, name, or ID) (legacy method)
 func (s *UserService) Get(identifier string) (string, error) {
 	// Resolve user identifier
 	userID, err := s.client.ResolveUserIdentifier(identifier)
@@ -55,7 +65,23 @@ func (s *UserService) Get(identifier string) (string, error) {
 	return s.formatter.User(user), nil
 }
 
-// Search searches for users with the given filters
+// GetWithOutput retrieves a single user with new renderer architecture
+func (s *UserService) GetWithOutput(identifier string, verbosity format.Verbosity, outputType format.OutputType) (string, error) {
+	// Resolve user identifier
+	userID, err := s.client.ResolveUserIdentifier(identifier)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve user '%s': %w", identifier, err)
+	}
+
+	user, err := s.client.GetUser(userID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get user: %w", err)
+	}
+
+	return s.formatter.RenderUser(user, verbosity, outputType), nil
+}
+
+// Search searches for users with the given filters (legacy method)
 func (s *UserService) Search(filters *UserFilters) (string, error) {
 	if filters == nil {
 		filters = &UserFilters{}
@@ -95,6 +121,44 @@ func (s *UserService) Search(filters *UserFilters) (string, error) {
 	}
 
 	return s.formatter.UserList(result.Users, pagination), nil
+}
+
+// SearchWithOutput searches for users with new renderer architecture
+func (s *UserService) SearchWithOutput(filters *UserFilters, verbosity format.Verbosity, outputType format.OutputType) (string, error) {
+	if filters == nil {
+		filters = &UserFilters{}
+	}
+
+	// Set defaults
+	if filters.Limit <= 0 {
+		filters.Limit = 50
+	}
+
+	// Build Linear API filter
+	linearFilters := &core.UserFilter{
+		First:      filters.Limit,
+		After:      filters.After,
+		ActiveOnly: filters.ActiveOnly,
+	}
+
+	// Resolve team identifier if provided
+	if filters.TeamID != "" {
+		teamID, err := s.client.ResolveTeamIdentifier(filters.TeamID)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve team '%s': %w", filters.TeamID, err)
+		}
+		linearFilters.TeamID = teamID
+	}
+
+	// Execute search with pagination
+	result, err := s.client.TeamClient().ListUsersWithPagination(linearFilters)
+	if err != nil {
+		return "", fmt.Errorf("failed to list users: %w", err)
+	}
+
+	// Format output with new renderer
+	// TODO: Add pagination support to RenderUserList
+	return s.formatter.RenderUserList(result.Users, verbosity, outputType), nil
 }
 
 // ResolveByName resolves a user by name and returns their ID

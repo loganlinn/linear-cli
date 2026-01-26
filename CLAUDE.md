@@ -34,6 +34,56 @@ linear init  # Select default team - required for cycle operations
 
 This creates `.linear.yaml` with your default team. Without this, many commands will fail with "team is required".
 
+### Output Formats
+
+**IMPORTANT**: All commands now support JSON output for automation and scripting.
+
+**Text Output (default)** - Token-efficient ASCII format:
+```bash
+linear issues list
+linear issues get CEN-123
+```
+
+**JSON Output** - Machine-readable for parsing:
+```bash
+linear issues list --output json
+linear issues get CEN-123 --output json
+```
+
+**Verbosity Levels** (`--format` flag):
+- `minimal` - Essential fields only (~50 tokens)
+- `compact` - Key metadata (~150 tokens, default)
+- `full` - Complete details (~500 tokens)
+
+**When to use JSON:**
+- Parsing data programmatically
+- Filtering with jq or similar tools
+- Storing results for later processing
+- Integrating with other tools
+
+**Examples for AI Agents:**
+```bash
+# Get all high-priority issues as JSON for processing
+linear issues list --priority 1 --output json
+
+# Export cycle analysis for reporting
+linear cycles analyze --team CEN --output json
+
+# Parse specific fields with jq
+linear issues list --output json | jq '.[] | {id: .identifier, title: .title, priority: .priority}'
+
+# Get minimal JSON for quick checks
+linear issues get CEN-123 --format minimal --output json
+```
+
+**All commands with --output support:**
+- `issues list`, `issues get`
+- `cycles list`, `cycles get`, `cycles analyze`
+- `projects list`, `projects get`
+- `teams list`, `teams get`, `teams labels`, `teams states`
+- `users list`, `users get`, `users me`
+- `search` (all search operations)
+
 ### Common Patterns
 
 #### Listing Issues
@@ -158,25 +208,6 @@ linear deps ENG-100          # Show deps for issue
 linear deps --team ENG       # Show all deps for team
 ```
 
-### Unified Search
-```bash
-# Basic search across all issues
-linear search "authentication"
-
-# Combine filters
-linear search --state "In Progress" --priority 1 --team CEN
-
-# Cross-entity search
-linear search "oauth" --type all              # Search all entity types
-linear search "cycle 65" --type cycles        # Search cycles
-linear search "auth project" --type projects  # Search projects
-linear search "john" --type users             # Search users
-```
-
-**Available Filters:** `--team`, `--state`, `--priority`, `--assignee`, `--cycle`, `--labels`, `--blocked-by`, `--blocks`, `--has-blockers`, `--has-dependencies`, `--has-circular-deps`, `--max-depth`
-
-See "Search & Dependency Management" section above for workflow examples and best practices.
-
 ### Skills Management
 ```bash
 linear skills list           # List available skills
@@ -189,54 +220,22 @@ Available skills: `/linear`, `/prd`, `/triage`, `/cycle-plan`, `/retro`, `/deps`
 ## Key Design Decisions
 
 - **ASCII output** - Token-efficient, no JSON overhead
+- **JSON output** - Machine-readable for automation via `--output json`
 - **Human-readable IDs** - "TEST-123" not UUIDs
 - **Service layer** - Validation and formatting abstraction
+- **Verbosity levels** - Control detail with `--format minimal|compact|full`
 
 ## Testing
 
+Run the full test suite before committing:
 ```bash
-go test -v ./internal/linear -run TestCreateIssue
-go test -cover ./...
+make test                    # Run unit tests
+./test-release.sh           # Run comprehensive release test against TEST team
 ```
 
 ## Session Completion
 
 1. `make test` must pass
-2. Commit with clear messages
-3. Push to remote - work is NOT complete until pushed
-
-## Linear
-
-This project uses **Linear** for issue tracking.
-Default team: **TEST**
-
-### Creating Issues
-
-```bash
-# Create a simple issue
-linear issues create "Fix login bug" --team TEST --priority high
-
-# Create with full details and dependencies
-linear issues create "Add OAuth integration" \
-  --team TEST \
-  --description "Integrate Google and GitHub OAuth providers" \
-  --parent TEST-100 \
-  --depends-on TEST-99 \
-  --labels "backend,security" \
-  --estimate 5
-
-# List and view issues
-linear issues list
-linear issues get TEST-123
-```
-
-### Claude Code Skills
-
-Available workflow skills (install with `linear skills install --all`):
-- `/prd` - Create agent-friendly tickets with PRDs and sub-issues
-- `/triage` - Analyze and prioritize backlog
-- `/cycle-plan` - Plan cycles using velocity analytics
-- `/retro` - Generate sprint retrospectives
-- `/deps` - Analyze dependency chains
-
-Run `linear skills list` for details.
+2. Run `./test-release.sh` for manual verification (optional but recommended for releases)
+3. Commit with clear messages
+4. Push to remote - work is NOT complete until pushed

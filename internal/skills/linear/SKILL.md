@@ -60,6 +60,45 @@ linear deps <ID>                         # Dependency graph
 linear deps --team <KEY>                 # All team dependencies
 ```
 
+## Output Formats
+
+**All commands support JSON output for automation:**
+
+```bash
+# Text output (default) - token-efficient ASCII
+linear i list
+linear i get CEN-123
+
+# JSON output - machine-readable
+linear i list --output json
+linear i get CEN-123 --output json
+
+# Control detail level with --format
+linear i list --format minimal --output json   # Essential fields (~50 tokens)
+linear i list --format compact --output json   # Key metadata (~150 tokens, default)
+linear i list --format full --output json      # Complete details (~500 tokens)
+
+# Pipe to jq for filtering
+linear i list --priority 1 --output json | jq '.[] | select(.state == "In Progress")'
+
+# Export for processing
+linear cycles analyze --team CEN --output json > velocity.json
+```
+
+**When to use JSON:**
+- Parsing data programmatically
+- Filtering results with jq
+- Storing/processing bulk data
+- Integrating with other tools
+
+**Supported commands:**
+- `issues list`, `issues get`
+- `cycles list`, `cycles get`, `cycles analyze`
+- `projects list`, `projects get`
+- `teams list`, `teams get`, `teams labels`, `teams states`
+- `users list`, `users get`, `users me`
+- `search` (all operations)
+
 ## Semantic Search
 
 **The search is SEMANTIC** - finds related issues even without exact matches.

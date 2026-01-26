@@ -21,7 +21,7 @@ func NewProjectService(client ProjectClientOperations, formatter *format.Formatt
 	}
 }
 
-// Get retrieves a single project by ID
+// Get retrieves a single project by ID (legacy method)
 func (s *ProjectService) Get(projectID string) (string, error) {
 	project, err := s.client.ProjectClient().GetProject(projectID)
 	if err != nil {
@@ -31,7 +31,17 @@ func (s *ProjectService) Get(projectID string) (string, error) {
 	return s.formatter.Project(project), nil
 }
 
-// ListAll lists all projects in the workspace
+// GetWithOutput retrieves a single project with new renderer architecture
+func (s *ProjectService) GetWithOutput(projectID string, verbosity format.Verbosity, outputType format.OutputType) (string, error) {
+	project, err := s.client.ProjectClient().GetProject(projectID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get project %s: %w", projectID, err)
+	}
+
+	return s.formatter.RenderProject(project, verbosity, outputType), nil
+}
+
+// ListAll lists all projects in the workspace (legacy method)
 func (s *ProjectService) ListAll(limit int) (string, error) {
 	if limit <= 0 {
 		limit = 50
@@ -45,7 +55,21 @@ func (s *ProjectService) ListAll(limit int) (string, error) {
 	return s.formatter.ProjectList(projects, nil), nil
 }
 
-// ListByTeam lists all projects for a specific team
+// ListAllWithOutput lists all projects with new renderer architecture
+func (s *ProjectService) ListAllWithOutput(limit int, verbosity format.Verbosity, outputType format.OutputType) (string, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+
+	projects, err := s.client.ProjectClient().ListAllProjects(limit)
+	if err != nil {
+		return "", fmt.Errorf("failed to list projects: %w", err)
+	}
+
+	return s.formatter.RenderProjectList(projects, verbosity, outputType, nil), nil
+}
+
+// ListByTeam lists all projects for a specific team (legacy method)
 func (s *ProjectService) ListByTeam(teamID string, limit int) (string, error) {
 	if limit <= 0 {
 		limit = 50
@@ -65,7 +89,27 @@ func (s *ProjectService) ListByTeam(teamID string, limit int) (string, error) {
 	return s.formatter.ProjectList(projects, nil), nil
 }
 
-// ListUserProjects lists projects that have issues assigned to the user
+// ListByTeamWithOutput lists all projects for a team with new renderer architecture
+func (s *ProjectService) ListByTeamWithOutput(teamID string, limit int, verbosity format.Verbosity, outputType format.OutputType) (string, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+
+	// Resolve team identifier to UUID
+	resolvedTeamID, err := s.client.ResolveTeamIdentifier(teamID)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve team '%s': %w", teamID, err)
+	}
+
+	projects, err := s.client.ProjectClient().ListByTeam(resolvedTeamID, limit)
+	if err != nil {
+		return "", fmt.Errorf("failed to list projects by team: %w", err)
+	}
+
+	return s.formatter.RenderProjectList(projects, verbosity, outputType, nil), nil
+}
+
+// ListUserProjects lists projects that have issues assigned to the user (legacy method)
 func (s *ProjectService) ListUserProjects(limit int) (string, error) {
 	if limit <= 0 {
 		limit = 50
@@ -83,6 +127,26 @@ func (s *ProjectService) ListUserProjects(limit int) (string, error) {
 	}
 
 	return s.formatter.ProjectList(projects, nil), nil
+}
+
+// ListUserProjectsWithOutput lists user projects with new renderer architecture
+func (s *ProjectService) ListUserProjectsWithOutput(limit int, verbosity format.Verbosity, outputType format.OutputType) (string, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+
+	// Get current user
+	viewer, err := s.client.TeamClient().GetViewer()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current user: %w", err)
+	}
+
+	projects, err := s.client.ProjectClient().ListUserProjects(viewer.ID, limit)
+	if err != nil {
+		return "", fmt.Errorf("failed to list user projects: %w", err)
+	}
+
+	return s.formatter.RenderProjectList(projects, verbosity, outputType, nil), nil
 }
 
 // CreateProjectInput represents input for creating a project

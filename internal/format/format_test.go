@@ -741,3 +741,280 @@ func TestFormatter_NilInputs(t *testing.T) {
 func intPtr(i int) *int {
 	return &i
 }
+
+// --- Tests for new renderer architecture ---
+
+func TestParseVerbosity(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    Verbosity
+		wantErr bool
+	}{
+		{"empty returns compact", "", VerbosityCompact, false},
+		{"minimal", "minimal", VerbosityMinimal, false},
+		{"compact", "compact", VerbosityCompact, false},
+		{"full", "full", VerbosityFull, false},
+		{"min alias", "min", VerbosityMinimal, false},
+		{"default alias", "default", VerbosityCompact, false},
+		{"detailed alias", "detailed", VerbosityFull, false},
+		{"invalid", "invalid", VerbosityCompact, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseVerbosity(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseVerbosity() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ParseVerbosity() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseOutputType(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    OutputType
+		wantErr bool
+	}{
+		{"empty returns text", "", OutputText, false},
+		{"text", "text", OutputText, false},
+		{"json", "json", OutputJSON, false},
+		{"ascii alias", "ascii", OutputText, false},
+		{"txt alias", "txt", OutputText, false},
+		{"invalid", "xml", OutputText, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseOutputType(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseOutputType() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ParseOutputType() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestVerbosityConversion(t *testing.T) {
+	t.Run("FormatToVerbosity", func(t *testing.T) {
+		if FormatToVerbosity(Minimal) != VerbosityMinimal {
+			t.Error("Minimal should convert to VerbosityMinimal")
+		}
+		if FormatToVerbosity(Compact) != VerbosityCompact {
+			t.Error("Compact should convert to VerbosityCompact")
+		}
+		if FormatToVerbosity(Full) != VerbosityFull {
+			t.Error("Full should convert to VerbosityFull")
+		}
+	})
+
+	t.Run("VerbosityToFormat", func(t *testing.T) {
+		if VerbosityToFormat(VerbosityMinimal) != Minimal {
+			t.Error("VerbosityMinimal should convert to Minimal")
+		}
+		if VerbosityToFormat(VerbosityCompact) != Compact {
+			t.Error("VerbosityCompact should convert to Compact")
+		}
+		if VerbosityToFormat(VerbosityFull) != Full {
+			t.Error("VerbosityFull should convert to Full")
+		}
+	})
+}
+
+func TestRenderer_JSONOutput(t *testing.T) {
+	f := New()
+
+	priority := 2
+	estimate := 3.0
+	dueDate := "2025-01-20"
+
+	issue := &core.Issue{
+		ID:         "uuid-123",
+		Identifier: "CEN-123",
+		Title:      "Add login functionality",
+		State: struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		}{Name: "In Progress"},
+		Assignee:  &core.User{Name: "Stefan", Email: "stefan@test.com"},
+		Priority:  &priority,
+		Estimate:  &estimate,
+		DueDate:   &dueDate,
+		Project:   &core.Project{Name: "Auth System"},
+		Cycle:     &core.CycleReference{Number: 67, Name: "Cycle 67"},
+		CreatedAt: "2025-01-10T10:00:00Z",
+		UpdatedAt: "2025-01-15T15:30:00Z",
+	}
+
+	t.Run("JSON minimal", func(t *testing.T) {
+		result := f.RenderIssue(issue, VerbosityMinimal, OutputJSON)
+		if !strings.Contains(result, `"identifier": "CEN-123"`) {
+			t.Error("JSON should contain identifier")
+		}
+		if !strings.Contains(result, `"state": "In Progress"`) {
+			t.Error("JSON should contain state")
+		}
+		if !strings.Contains(result, `"title": "Add login functionality"`) {
+			t.Error("JSON should contain title")
+		}
+	})
+
+	t.Run("JSON compact", func(t *testing.T) {
+		result := f.RenderIssue(issue, VerbosityCompact, OutputJSON)
+		if !strings.Contains(result, `"identifier": "CEN-123"`) {
+			t.Error("JSON should contain identifier")
+		}
+		if !strings.Contains(result, `"assignee": "Stefan"`) {
+			t.Error("JSON should contain assignee")
+		}
+		if !strings.Contains(result, `"priority": 2`) {
+			t.Error("JSON should contain priority")
+		}
+		if !strings.Contains(result, `"estimate": 3`) {
+			t.Error("JSON should contain estimate")
+		}
+		if !strings.Contains(result, `"cycleNumber": 67`) {
+			t.Error("JSON should contain cycle number")
+		}
+	})
+
+	t.Run("JSON full", func(t *testing.T) {
+		result := f.RenderIssue(issue, VerbosityFull, OutputJSON)
+		if !strings.Contains(result, `"identifier": "CEN-123"`) {
+			t.Error("JSON should contain identifier")
+		}
+		if !strings.Contains(result, `"email": "stefan@test.com"`) {
+			t.Error("JSON should contain assignee email")
+		}
+		if !strings.Contains(result, `"url"`) {
+			t.Error("JSON should contain URL field")
+		}
+	})
+}
+
+func TestRenderer_JSONList(t *testing.T) {
+	f := New()
+
+	issues := []core.Issue{
+		{
+			Identifier: "CEN-1",
+			Title:      "First issue",
+			State:      struct {ID string `json:"id"`; Name string `json:"name"`}{Name: "Todo"},
+			CreatedAt:  "2025-01-10T10:00:00Z",
+			UpdatedAt:  "2025-01-15T15:30:00Z",
+		},
+		{
+			Identifier: "CEN-2",
+			Title:      "Second issue",
+			State:      struct {ID string `json:"id"`; Name string `json:"name"`}{Name: "Done"},
+			CreatedAt:  "2025-01-11T10:00:00Z",
+			UpdatedAt:  "2025-01-16T15:30:00Z",
+		},
+	}
+
+	t.Run("JSON list output", func(t *testing.T) {
+		result := f.RenderIssueList(issues, VerbosityMinimal, OutputJSON, nil)
+
+		// Should be a JSON array
+		if !strings.HasPrefix(result, "[") || !strings.HasSuffix(strings.TrimSpace(result), "]") {
+			t.Error("JSON list should be an array")
+		}
+		if !strings.Contains(result, "CEN-1") {
+			t.Error("should contain first issue")
+		}
+		if !strings.Contains(result, "CEN-2") {
+			t.Error("should contain second issue")
+		}
+	})
+
+	t.Run("empty JSON list", func(t *testing.T) {
+		result := f.RenderIssueList([]core.Issue{}, VerbosityMinimal, OutputJSON, nil)
+		if result != "[]" {
+			t.Errorf("expected empty array '[]', got '%s'", result)
+		}
+	})
+}
+
+func TestRenderer_TextOutput(t *testing.T) {
+	f := New()
+
+	priority := 2
+	issue := &core.Issue{
+		Identifier: "CEN-123",
+		Title:      "Test issue",
+		State:      struct {ID string `json:"id"`; Name string `json:"name"`}{Name: "Todo"},
+		Priority:   &priority,
+	}
+
+	t.Run("Text minimal", func(t *testing.T) {
+		result := f.RenderIssue(issue, VerbosityMinimal, OutputText)
+		if !strings.Contains(result, "CEN-123") {
+			t.Error("Text should contain identifier")
+		}
+		if !strings.Contains(result, "[Todo]") {
+			t.Error("Text should contain state in brackets")
+		}
+	})
+
+	t.Run("Text compact", func(t *testing.T) {
+		result := f.RenderIssue(issue, VerbosityCompact, OutputText)
+		if !strings.Contains(result, "CEN-123") {
+			t.Error("Text should contain identifier")
+		}
+		if !strings.Contains(result, "P2:High") {
+			t.Error("Text should contain priority label")
+		}
+	})
+}
+
+func TestJSONRenderer_ErrorHandling(t *testing.T) {
+	renderer := &JSONRenderer{}
+
+	t.Run("nil issue", func(t *testing.T) {
+		result := renderer.RenderIssue(nil, VerbosityCompact)
+		if !strings.Contains(result, `"error"`) {
+			t.Error("should return error JSON for nil issue")
+		}
+	})
+
+	t.Run("nil cycle", func(t *testing.T) {
+		result := renderer.RenderCycle(nil, VerbosityCompact)
+		if !strings.Contains(result, `"error"`) {
+			t.Error("should return error JSON for nil cycle")
+		}
+	})
+}
+
+func TestRendererFactory(t *testing.T) {
+	factory := NewRendererFactory()
+
+	t.Run("GetRenderer text", func(t *testing.T) {
+		renderer := factory.GetRenderer(OutputText)
+		if _, ok := renderer.(*TextRenderer); !ok {
+			t.Error("should return TextRenderer for OutputText")
+		}
+	})
+
+	t.Run("GetRenderer JSON", func(t *testing.T) {
+		renderer := factory.GetRenderer(OutputJSON)
+		if _, ok := renderer.(*JSONRenderer); !ok {
+			t.Error("should return JSONRenderer for OutputJSON")
+		}
+	})
+
+	t.Run("GetRenderer invalid defaults to text", func(t *testing.T) {
+		renderer := factory.GetRenderer("invalid")
+		if _, ok := renderer.(*TextRenderer); !ok {
+			t.Error("should default to TextRenderer for invalid type")
+		}
+	})
+}

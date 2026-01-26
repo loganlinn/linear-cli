@@ -26,6 +26,7 @@ type IssueSearchOptions struct {
 	DepthMax    int
 	Limit       int
 	Format      string
+	Output      string
 }
 
 func newSearchCmd() *cobra.Command {
@@ -50,8 +51,9 @@ func newSearchCmd() *cobra.Command {
 		depthMax      int
 
 		// Output
-		limit     int
-		formatStr string
+		limit      int
+		formatStr  string
+		outputType string
 	)
 
 	cmd := &cobra.Command{
@@ -161,15 +163,16 @@ TIP: Use --format full for detailed output with descriptions.`,
 					DepthMax:    depthMax,
 					Limit:       limit,
 					Format:      formatStr,
+					Output:      outputType,
 				})
 			case "cycles":
-				return searchCycles(deps, textQuery, team, limit, formatStr)
+				return searchCycles(deps, textQuery, team, limit, formatStr, outputType)
 			case "projects":
-				return searchProjects(deps, textQuery, limit)
+				return searchProjects(deps, textQuery, limit, formatStr, outputType)
 			case "users":
-				return searchUsers(deps, textQuery, team, limit)
+				return searchUsers(deps, textQuery, team, limit, formatStr, outputType)
 			case "all":
-				return searchAll(deps, textQuery, team, limit, formatStr)
+				return searchAll(deps, textQuery, team, limit, formatStr, outputType)
 			default:
 				return fmt.Errorf("invalid entity type: %s (must be: issues, cycles, projects, users, all)", entityType)
 			}
@@ -197,7 +200,8 @@ TIP: Use --format full for detailed output with descriptions.`,
 
 	// Output
 	cmd.Flags().IntVarP(&limit, "limit", "n", 10, "Number of results")
-	cmd.Flags().StringVarP(&formatStr, "format", "f", "compact", "Output format: minimal|compact|full")
+	cmd.Flags().StringVarP(&formatStr, "format", "f", "compact", "Verbosity: minimal|compact|full")
+	cmd.Flags().StringVarP(&outputType, "output", "o", "text", "Output: text|json")
 
 	return cmd
 }
@@ -211,50 +215,71 @@ func searchIssues(deps *Dependencies, opts IssueSearchOptions) error {
 		return err
 	}
 
-	// Build search options
-	searchOpts := &service.SearchOptions{
-		EntityType: "issues",
-		TextQuery:  opts.TextQuery,
+	// Parse format flags
+	verbosity, err := format.ParseVerbosity(opts.Format)
+	if err != nil {
+		return err
+	}
+	outputType, err := format.ParseOutputType(opts.Output)
+	if err != nil {
+		return err
+	}
+
+	// Build search filters (using existing IssueService for consistency)
+	filters := &service.SearchFilters{
 		TeamID:     opts.Team,
+		StateIDs:   nil,
+		Priority:   nil,
+		AssigneeID: opts.Assignee,
+		CycleID:    opts.Cycle,
+		LabelIDs:   nil,
+		SearchTerm: opts.TextQuery,
 		Limit:      opts.Limit,
 	}
 
 	// Apply optional filters
 	if opts.State != "" {
-		searchOpts.StateIDs = []string{opts.State}
+		filters.StateIDs = []string{opts.State}
 	}
 	if opts.Priority > 0 {
-		searchOpts.Priority = &opts.Priority
-	}
-	if opts.Assignee != "" {
-		searchOpts.AssigneeID = opts.Assignee
-	}
-	if opts.Cycle != "" {
-		searchOpts.CycleID = opts.Cycle
+		filters.Priority = &opts.Priority
 	}
 	if opts.Labels != "" {
-		searchOpts.LabelIDs = parseCommaSeparated(opts.Labels)
+		filters.LabelIDs = parseCommaSeparated(opts.Labels)
 	}
 
-	// Apply dependency filters
-	searchOpts.BlockedBy = opts.BlockedBy
-	searchOpts.Blocks = opts.Blocks
-	searchOpts.HasBlockers = opts.HasBlockers
-	searchOpts.HasDeps = opts.HasDeps
-	searchOpts.HasCircular = opts.HasCircular
-	searchOpts.MaxDepth = opts.DepthMax
+	// For dependency filters, use the Search service
+	if opts.BlockedBy != "" || opts.Blocks != "" || opts.HasBlockers || opts.HasDeps || opts.HasCircular || opts.DepthMax > 0 {
+		// Build search options for Search service
+		searchOpts := &service.SearchOptions{
+			EntityType:  "issues",
+			TextQuery:   opts.TextQuery,
+			TeamID:      opts.Team,
+			StateIDs:    filters.StateIDs,
+			Priority:    filters.Priority,
+			AssigneeID:  opts.Assignee,
+			CycleID:     opts.Cycle,
+			LabelIDs:    filters.LabelIDs,
+			BlockedBy:   opts.BlockedBy,
+			Blocks:      opts.Blocks,
+			HasBlockers: opts.HasBlockers,
+			HasDeps:     opts.HasDeps,
+			HasCircular: opts.HasCircular,
+			MaxDepth:    opts.DepthMax,
+			Limit:       opts.Limit,
+			Format:      format.VerbosityToFormat(verbosity),
+		}
 
-	// Set format
-	outputFormat := format.Compact
-	if opts.Format == "full" {
-		outputFormat = format.Full
-	} else if opts.Format == "minimal" {
-		outputFormat = format.Minimal
+		output, err := deps.Search.Search(searchOpts)
+		if err != nil {
+			return fmt.Errorf("failed to search issues: %w", err)
+		}
+		fmt.Println(output)
+		return nil
 	}
-	searchOpts.Format = outputFormat
 
-	// Execute search
-	output, err := deps.Search.Search(searchOpts)
+	// Use IssueService with new renderer for standard searches
+	output, err := deps.Issues.SearchWithOutput(filters, verbosity, outputType)
 	if err != nil {
 		return fmt.Errorf("failed to search issues: %w", err)
 	}
@@ -264,66 +289,79 @@ func searchIssues(deps *Dependencies, opts IssueSearchOptions) error {
 }
 
 // searchCycles searches cycles by name/number
-func searchCycles(deps *Dependencies, textQuery, team string, limit int, formatStr string) error {
-	
-
+func searchCycles(deps *Dependencies, textQuery, team string, limit int, formatStr, outputType string) error {
 	// Validate limit
 	limit, err := validateAndNormalizeLimit(limit)
 	if err != nil {
 		return err
 	}
 
-	// Set format
-	outputFormat := format.Compact
-	if formatStr == "full" {
-		outputFormat = format.Full
-	} else if formatStr == "minimal" {
-		outputFormat = format.Minimal
+	// Parse format flags
+	verbosity, err := format.ParseVerbosity(formatStr)
+	if err != nil {
+		return err
+	}
+	output, err := format.ParseOutputType(outputType)
+	if err != nil {
+		return err
 	}
 
 	// Build cycle filters
 	filters := &service.CycleFilters{
 		TeamID: team,
 		Limit:  limit,
-		Format: outputFormat,
 	}
 
-	output, err := deps.Cycles.Search(filters)
+	result, err := deps.Cycles.SearchWithOutput(filters, verbosity, output)
 	if err != nil {
 		return fmt.Errorf("failed to search cycles: %w", err)
 	}
 
-	fmt.Println(output)
+	fmt.Println(result)
 	return nil
 }
 
 // searchProjects searches projects by name
-// Note: Uses default project format (no format customization available)
-func searchProjects(deps *Dependencies, textQuery string, limit int) error {
-	
-
+func searchProjects(deps *Dependencies, textQuery string, limit int, formatStr, outputType string) error {
 	// Validate limit
 	limit, err := validateAndNormalizeLimit(limit)
 	if err != nil {
 		return err
 	}
 
-	output, err := deps.Projects.ListAll(limit)
+	// Parse format flags
+	verbosity, err := format.ParseVerbosity(formatStr)
+	if err != nil {
+		return err
+	}
+	output, err := format.ParseOutputType(outputType)
+	if err != nil {
+		return err
+	}
+
+	result, err := deps.Projects.ListAllWithOutput(limit, verbosity, output)
 	if err != nil {
 		return fmt.Errorf("failed to search projects: %w", err)
 	}
 
-	fmt.Println(output)
+	fmt.Println(result)
 	return nil
 }
 
 // searchUsers searches users by name/email
-// Note: Uses default user format (no format customization available)
-func searchUsers(deps *Dependencies, textQuery, team string, limit int) error {
-	
-
+func searchUsers(deps *Dependencies, textQuery, team string, limit int, formatStr, outputType string) error {
 	// Validate limit
 	limit, err := validateAndNormalizeLimit(limit)
+	if err != nil {
+		return err
+	}
+
+	// Parse format flags
+	verbosity, err := format.ParseVerbosity(formatStr)
+	if err != nil {
+		return err
+	}
+	output, err := format.ParseOutputType(outputType)
 	if err != nil {
 		return err
 	}
@@ -334,17 +372,17 @@ func searchUsers(deps *Dependencies, textQuery, team string, limit int) error {
 		Limit:  limit,
 	}
 
-	output, err := deps.Users.Search(filters)
+	result, err := deps.Users.SearchWithOutput(filters, verbosity, output)
 	if err != nil {
 		return fmt.Errorf("failed to search users: %w", err)
 	}
 
-	fmt.Println(output)
+	fmt.Println(result)
 	return nil
 }
 
 // searchAll searches across all entity types
-func searchAll(deps *Dependencies, textQuery, team string, limit int, formatStr string) error {
+func searchAll(deps *Dependencies, textQuery, team string, limit int, formatStr, outputType string) error {
 	// Search each entity type and combine results
 	fmt.Printf("SEARCH RESULTS: \"%s\"\n", textQuery)
 	fmt.Println(generateSeparator("═", 50))
@@ -359,6 +397,7 @@ func searchAll(deps *Dependencies, textQuery, team string, limit int, formatStr 
 		Team:      team,
 		Limit:     limit,
 		Format:    formatStr,
+		Output:    outputType,
 	}); err != nil {
 		errs = append(errs, fmt.Errorf("issues: %w", err))
 		_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to search issues: %v\n", err)
@@ -367,7 +406,7 @@ func searchAll(deps *Dependencies, textQuery, team string, limit int, formatStr 
 	// Search cycles
 	fmt.Println("\nCYCLES")
 	fmt.Println(generateSeparator("─", 50))
-	if err := searchCycles(deps, textQuery, team, limit, formatStr); err != nil {
+	if err := searchCycles(deps, textQuery, team, limit, formatStr, outputType); err != nil {
 		errs = append(errs, fmt.Errorf("cycles: %w", err))
 		_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to search cycles: %v\n", err)
 	}
@@ -375,7 +414,7 @@ func searchAll(deps *Dependencies, textQuery, team string, limit int, formatStr 
 	// Search projects
 	fmt.Println("\nPROJECTS")
 	fmt.Println(generateSeparator("─", 50))
-	if err := searchProjects(deps, textQuery, limit); err != nil {
+	if err := searchProjects(deps, textQuery, limit, formatStr, outputType); err != nil {
 		errs = append(errs, fmt.Errorf("projects: %w", err))
 		_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to search projects: %v\n", err)
 	}
@@ -383,7 +422,7 @@ func searchAll(deps *Dependencies, textQuery, team string, limit int, formatStr 
 	// Search users
 	fmt.Println("\nUSERS")
 	fmt.Println(generateSeparator("─", 50))
-	if err := searchUsers(deps, textQuery, team, limit); err != nil {
+	if err := searchUsers(deps, textQuery, team, limit, formatStr, outputType); err != nil {
 		errs = append(errs, fmt.Errorf("users: %w", err))
 		_, _ = fmt.Fprintf(os.Stderr, "Warning: failed to search users: %v\n", err)
 	}

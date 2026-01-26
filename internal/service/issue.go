@@ -48,6 +48,16 @@ func (s *IssueService) Get(identifier string, outputFormat format.Format) (strin
 	return s.formatter.Issue(issue, outputFormat), nil
 }
 
+// GetWithOutput retrieves a single issue with new renderer architecture
+func (s *IssueService) GetWithOutput(identifier string, verbosity format.Verbosity, outputType format.OutputType) (string, error) {
+	issue, err := s.client.GetIssue(identifier)
+	if err != nil {
+		return "", fmt.Errorf("failed to get issue %s: %w", identifier, err)
+	}
+
+	return s.formatter.RenderIssue(issue, verbosity, outputType), nil
+}
+
 // Search searches for issues with the given filters
 func (s *IssueService) Search(filters *SearchFilters) (string, error) {
 	if filters == nil {
@@ -118,6 +128,74 @@ func (s *IssueService) Search(filters *SearchFilters) (string, error) {
 	}
 
 	return s.formatter.IssueList(result.Issues, filters.Format, pagination), nil
+}
+
+// SearchWithOutput searches for issues with new renderer architecture
+func (s *IssueService) SearchWithOutput(filters *SearchFilters, verbosity format.Verbosity, outputType format.OutputType) (string, error) {
+	if filters == nil {
+		filters = &SearchFilters{}
+	}
+
+	// Set defaults
+	if filters.Limit <= 0 {
+		filters.Limit = 10
+	}
+
+	// Build Linear API filter
+	linearFilters := &core.IssueSearchFilters{
+		Limit: filters.Limit,
+		After: filters.After,
+	}
+
+	// Resolve team identifier if provided
+	if filters.TeamID != "" {
+		teamID, err := s.client.ResolveTeamIdentifier(filters.TeamID)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve team '%s': %w", filters.TeamID, err)
+		}
+		linearFilters.TeamID = teamID
+	}
+
+	// Resolve assignee identifier if provided
+	if filters.AssigneeID != "" {
+		userID, err := s.client.ResolveUserIdentifier(filters.AssigneeID)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve user '%s': %w", filters.AssigneeID, err)
+		}
+		linearFilters.AssigneeID = userID
+	}
+
+	// Resolve cycle identifier if provided (requires team)
+	if filters.CycleID != "" {
+		if linearFilters.TeamID == "" {
+			return "", fmt.Errorf("teamId is required to resolve cycleId")
+		}
+		cycleID, err := s.client.ResolveCycleIdentifier(filters.CycleID, linearFilters.TeamID)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve cycle '%s': %w", filters.CycleID, err)
+		}
+		linearFilters.CycleID = cycleID
+	}
+
+	// Copy remaining filters
+	linearFilters.StateIDs = filters.StateIDs
+	linearFilters.LabelIDs = filters.LabelIDs
+	linearFilters.Priority = filters.Priority
+	linearFilters.SearchTerm = filters.SearchTerm
+
+	// Execute search
+	result, err := s.client.SearchIssues(linearFilters)
+	if err != nil {
+		return "", fmt.Errorf("failed to search issues: %w", err)
+	}
+
+	// Format output with new renderer
+	pagination := &format.Pagination{
+		HasNextPage: result.HasNextPage,
+		EndCursor:   result.EndCursor,
+	}
+
+	return s.formatter.RenderIssueList(result.Issues, verbosity, outputType, pagination), nil
 }
 
 // ListAssigned lists issues assigned to the current user

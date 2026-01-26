@@ -37,14 +37,15 @@ func newIssuesCmd() *cobra.Command {
 
 func newIssuesListCmd() *cobra.Command {
 	var (
-		teamID    string
-		state     string
-		priority  int
-		assignee  string
-		cycle     string
-		labels    string
-		limit     int
-		formatStr string
+		teamID     string
+		state      string
+		priority   int
+		assignee   string
+		cycle      string
+		labels     string
+		limit      int
+		formatStr  string
+		outputType string
 	)
 
 	cmd := &cobra.Command{
@@ -58,7 +59,8 @@ IMPORTANT BEHAVIORS:
 - Use filters to narrow results
 - Returns 10 issues by default, use --limit to change
 
-TIP: Use --format full for detailed output, --format minimal for concise output.`,
+TIP: Use --format full for detailed output, --format minimal for concise output.
+     Use --output json for machine-readable JSON output.`,
 		Example: `  # Minimal - list first 10 issues (requires 'linear init')
   linear issues list
 
@@ -73,11 +75,15 @@ TIP: Use --format full for detailed output, --format minimal for concise output.
     --limit 50 \
     --format full
 
-  # Common pattern - high priority customer issues
+  # JSON output for scripting
+  linear issues list --output json | jq '.[] | select(.priority == 1)'
+
+  # Common pattern - high priority customer issues as JSON
   linear issues list \
     --labels customer \
     --priority 1 \
-    --limit 20
+    --limit 20 \
+    --output json
 
   # Get issues in specific cycle
   linear issues list --cycle 65 --format full
@@ -85,8 +91,8 @@ TIP: Use --format full for detailed output, --format minimal for concise output.
   # Filter by assignee
   linear issues list --assignee me
 
-  # Filter by state
-  linear issues list --state Backlog --limit 100`,
+  # Filter by state with minimal JSON
+  linear issues list --state Backlog --format minimal --output json`,
 		Annotations: map[string]string{
 			"required": "team (via init or --team flag)",
 			"optional": "all filter/pagination flags",
@@ -109,6 +115,17 @@ TIP: Use --format full for detailed output, --format minimal for concise output.
 			deps, err := getDeps(cmd)
 			if err != nil {
 				return err
+			}
+
+			// Parse format and output type
+			verbosity, err := format.ParseVerbosity(formatStr)
+			if err != nil {
+				return fmt.Errorf("invalid format: %w", err)
+			}
+
+			output, err := format.ParseOutputType(outputType)
+			if err != nil {
+				return fmt.Errorf("invalid output type: %w", err)
 			}
 
 			// Build search filters
@@ -134,21 +151,12 @@ TIP: Use --format full for detailed output, --format minimal for concise output.
 				filters.LabelIDs = parseCommaSeparated(labels)
 			}
 
-			// Set format
-			outputFormat := format.Compact
-			if formatStr == "full" {
-				outputFormat = format.Full
-			} else if formatStr == "minimal" {
-				outputFormat = format.Minimal
-			}
-			filters.Format = outputFormat
-
-			output, err := deps.Issues.Search(filters)
+			result, err := deps.Issues.SearchWithOutput(filters, verbosity, output)
 			if err != nil {
 				return fmt.Errorf("failed to list issues: %w", err)
 			}
 
-			fmt.Println(output)
+			fmt.Println(result)
 			return nil
 		},
 	}
@@ -160,16 +168,30 @@ TIP: Use --format full for detailed output, --format minimal for concise output.
 	cmd.Flags().StringVarP(&cycle, "cycle", "c", "", "Filter by cycle (number, 'current', or 'next')")
 	cmd.Flags().StringVarP(&labels, "labels", "l", "", "Filter by labels (comma-separated)")
 	cmd.Flags().IntVarP(&limit, "limit", "n", 10, "Number of items (max 250)")
-	cmd.Flags().StringVarP(&formatStr, "format", "f", "compact", "Output format: minimal|compact|full")
+	cmd.Flags().StringVarP(&formatStr, "format", "f", "compact", "Verbosity level: minimal|compact|full")
+	cmd.Flags().StringVarP(&outputType, "output", "o", "text", "Output format: text|json")
 
 	return cmd
 }
 
 func newIssuesGetCmd() *cobra.Command {
-	return &cobra.Command{
+	var (
+		formatStr  string
+		outputType string
+	)
+
+	cmd := &cobra.Command{
 		Use:   "get <issue-id>",
 		Short: "Get issue details",
 		Long:  "Display detailed information about a specific issue (e.g., 'linear issues get CEN-123').",
+		Example: `  # Get issue with default text output
+  linear issues get CEN-123
+
+  # Get issue as JSON
+  linear issues get CEN-123 --output json
+
+  # Get minimal JSON output
+  linear issues get CEN-123 --format minimal --output json`,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			issueID := args[0]
@@ -179,15 +201,31 @@ func newIssuesGetCmd() *cobra.Command {
 				return err
 			}
 
-			output, err := deps.Issues.Get(issueID, format.Full)
+			// Parse format and output type
+			verbosity, err := format.ParseVerbosity(formatStr)
+			if err != nil {
+				return fmt.Errorf("invalid format: %w", err)
+			}
+
+			output, err := format.ParseOutputType(outputType)
+			if err != nil {
+				return fmt.Errorf("invalid output type: %w", err)
+			}
+
+			result, err := deps.Issues.GetWithOutput(issueID, verbosity, output)
 			if err != nil {
 				return fmt.Errorf("failed to get issue: %w", err)
 			}
 
-			fmt.Println(output)
+			fmt.Println(result)
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVarP(&formatStr, "format", "f", "full", "Verbosity level: minimal|compact|full")
+	cmd.Flags().StringVarP(&outputType, "output", "o", "text", "Output format: text|json")
+
+	return cmd
 }
 
 func newIssuesCreateCmd() *cobra.Command {

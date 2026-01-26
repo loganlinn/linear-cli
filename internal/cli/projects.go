@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/joa23/linear-cli/internal/format"
 	"github.com/joa23/linear-cli/internal/service"
 	"github.com/spf13/cobra"
 )
@@ -30,6 +31,7 @@ func newProjectsListCmd() *cobra.Command {
 	var mine bool
 	var teamID string
 	var limit int
+	var formatStr, outputType string
 
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -45,7 +47,10 @@ func newProjectsListCmd() *cobra.Command {
   linear projects list --mine
 
   # List with custom limit
-  linear projects list --limit 50`,
+  linear projects list --limit 50
+
+  # Output as JSON
+  linear projects list --output json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			deps, err := getDeps(cmd)
 			if err != nil {
@@ -58,10 +63,20 @@ func newProjectsListCmd() *cobra.Command {
 				return err
 			}
 
-			var output string
+			// Parse format flags
+			verbosity, err := format.ParseVerbosity(formatStr)
+			if err != nil {
+				return err
+			}
+			output, err := format.ParseOutputType(outputType)
+			if err != nil {
+				return err
+			}
+
+			var result string
 			if mine {
 				// --mine overrides team requirement
-				output, err = deps.Projects.ListUserProjects(limit)
+				result, err = deps.Projects.ListUserProjectsWithOutput(limit, verbosity, output)
 			} else {
 				// Get team from flag or config
 				if teamID == "" {
@@ -71,13 +86,13 @@ func newProjectsListCmd() *cobra.Command {
 					return errors.New(ErrTeamRequired)
 				}
 
-				output, err = deps.Projects.ListByTeam(teamID, limit)
+				result, err = deps.Projects.ListByTeamWithOutput(teamID, limit, verbosity, output)
 			}
 			if err != nil {
 				return fmt.Errorf("failed to list projects: %w", err)
 			}
 
-			fmt.Println(output)
+			fmt.Println(result)
 			return nil
 		},
 	}
@@ -85,16 +100,25 @@ func newProjectsListCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&mine, "mine", false, "Only show projects you're involved in (ignores team)")
 	cmd.Flags().StringVarP(&teamID, "team", "t", "", TeamFlagDescription)
 	cmd.Flags().IntVarP(&limit, "limit", "n", 25, "Number of projects to return")
+	cmd.Flags().StringVarP(&formatStr, "format", "f", "compact", "Verbosity: minimal|compact|full")
+	cmd.Flags().StringVarP(&outputType, "output", "o", "text", "Output: text|json")
 
 	return cmd
 }
 
 func newProjectsGetCmd() *cobra.Command {
-	return &cobra.Command{
+	var formatStr, outputType string
+
+	cmd := &cobra.Command{
 		Use:   "get <project-id>",
 		Short: "Get project details",
 		Long:  "Display detailed information about a specific project.",
-		Args:  cobra.ExactArgs(1),
+		Example: `  # Get project details
+  linear projects get PROJ-123
+
+  # Output as JSON
+  linear projects get PROJ-123 --output json`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			projectID := args[0]
 
@@ -103,15 +127,30 @@ func newProjectsGetCmd() *cobra.Command {
 				return err
 			}
 
-			output, err := deps.Projects.Get(projectID)
+			// Parse format flags
+			verbosity, err := format.ParseVerbosity(formatStr)
+			if err != nil {
+				return err
+			}
+			output, err := format.ParseOutputType(outputType)
+			if err != nil {
+				return err
+			}
+
+			result, err := deps.Projects.GetWithOutput(projectID, verbosity, output)
 			if err != nil {
 				return fmt.Errorf("failed to get project: %w", err)
 			}
 
-			fmt.Println(output)
+			fmt.Println(result)
 			return nil
 		},
 	}
+
+	cmd.Flags().StringVarP(&formatStr, "format", "f", "full", "Verbosity: minimal|compact|full")
+	cmd.Flags().StringVarP(&outputType, "output", "o", "text", "Output: text|json")
+
+	return cmd
 }
 
 func newProjectsCreateCmd() *cobra.Command {
