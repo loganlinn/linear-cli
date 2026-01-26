@@ -154,6 +154,9 @@ Configuration:
 		newDepsCmd(),
 		newSearchCmd(),
 
+		// Export
+		newTasksCmd(),
+
 		// Skills
 		newSkillsCmd(),
 	)

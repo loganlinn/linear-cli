@@ -10,12 +10,13 @@ import (
 
 // Services holds all service instances
 type Services struct {
-	Issues   *IssueService
-	Projects *ProjectService
-	Cycles   *CycleService
-	Teams    *TeamService
-	Users    *UserService
-	Search   *SearchService
+	Issues     *IssueService
+	Projects   *ProjectService
+	Cycles     *CycleService
+	Teams      *TeamService
+	Users      *UserService
+	Search     *SearchService
+	TaskExport *TaskExportService
 
 	client *linear.Client // Store original client for backward compatibility
 }
@@ -25,13 +26,14 @@ func New(client *linear.Client) *Services {
 	formatter := format.New()
 
 	return &Services{
-		Issues:   NewIssueService(client, formatter),
-		Projects: NewProjectService(client, formatter),
-		Cycles:   NewCycleService(client, formatter),
-		Teams:    NewTeamService(client, formatter),
-		Users:    NewUserService(client, formatter),
-		Search:   NewSearchService(client, formatter),
-		client:   client,
+		Issues:     NewIssueService(client, formatter),
+		Projects:   NewProjectService(client, formatter),
+		Cycles:     NewCycleService(client, formatter),
+		Teams:      NewTeamService(client, formatter),
+		Users:      NewUserService(client, formatter),
+		Search:     NewSearchService(client, formatter),
+		TaskExport: NewTaskExportService(client),
+		client:     client,
 	}
 }
 

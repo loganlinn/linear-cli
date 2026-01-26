@@ -12,12 +12,13 @@ type Dependencies struct {
 	Client *linear.Client
 
 	// Services provide business logic and formatting
-	Issues   service.IssueServiceInterface
-	Cycles   service.CycleServiceInterface
-	Projects service.ProjectServiceInterface
-	Search   service.SearchServiceInterface
-	Teams    service.TeamServiceInterface
-	Users    service.UserServiceInterface
+	Issues     service.IssueServiceInterface
+	Cycles     service.CycleServiceInterface
+	Projects   service.ProjectServiceInterface
+	Search     service.SearchServiceInterface
+	Teams      service.TeamServiceInterface
+	Users      service.UserServiceInterface
+	TaskExport service.TaskExportServiceInterface
 }
 
 // NewDependencies creates dependencies with real implementations
@@ -25,12 +26,13 @@ func NewDependencies(client *linear.Client) *Dependencies {
 	services := service.New(client)
 
 	return &Dependencies{
-		Client:   client,
-		Issues:   services.Issues,
-		Cycles:   services.Cycles,
-		Projects: services.Projects,
-		Search:   services.Search,
-		Teams:    services.Teams,
-		Users:    services.Users,
+		Client:     client,
+		Issues:     services.Issues,
+		Cycles:     services.Cycles,
+		Projects:   services.Projects,
+		Search:     services.Search,
+		Teams:      services.Teams,
+		Users:      services.Users,
+		TaskExport: services.TaskExport,
 	}
 }
