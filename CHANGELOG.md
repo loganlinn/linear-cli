@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-01-25
+
+### Added
+
+**Claude Code Task Export:**
+- Added `linear tasks export` command to convert Linear issues into Claude Code task format
+- Exports complete dependency tree (children + blocking relationships) recursively
+- Detects and prevents circular dependencies with clear error messages
+- Bottom-up hierarchy: children block parent (matches Claude task semantics)
+- Files named using Linear identifiers (e.g., `CEN-123.json`) for idempotency
+- Dry-run mode (`--dry-run`) for preview without writing files
+- Smart verb conjugation for `activeForm` field (e.g., "Fix bug" → "Fixing bug")
+- Export to any folder or directly to Claude Code session directories
+- Example: `linear tasks export CEN-123 ~/.claude/tasks/<session-uuid>/`
+- Perfect for integrating Linear planning with Claude Code execution
+
+**JSON Output Support:**
+- Added `--output json` flag to all list and get commands for machine-readable output
+- JSON output available for: issues, cycles, projects, teams, users, search operations
+- Three verbosity levels for both text and JSON:
+  - `--format minimal` - Essential fields only (~50 tokens)
+  - `--format compact` - Key metadata (~150 tokens, default)
+  - `--format full` - Complete details with all relationships (~500 tokens)
+- Examples: `linear issues list --output json`, `linear cycles analyze --output json --format full`
+- Pipe-friendly: `linear issues list --output json | jq '.[] | select(.priority == 1)'`
+- Perfect for automation, scripting, and integration with other tools
+
+**Documentation:**
+- Added "JSON Automation Examples" section to README with 10+ practical recipes
+- Examples include: filtering with jq, counting by state, exporting to CSV, bulk processing, weekly reports
+- Added comprehensive Table of Contents to README for easier navigation
+- Reorganized README with clear section dividers (589 lines → well-structured)
+- Added comprehensive package documentation for all internal packages
+
+### Changed
+
+**Code Quality:**
+- Restructured helpers into specific packages (identifiers, validation, pagination)
+- Implemented dependency injection pattern with service interfaces
+- All services now use sub-clients directly instead of wrapper methods
+- Comprehensive test coverage for task export feature (40+ test cases)
+- Fixed all golangci-lint warnings (11 issues resolved)
+
 ### Fixed
 
 **Projects List Team Filtering:**
@@ -190,6 +233,8 @@ A token-efficient CLI for Linear.
 - Linux (64-bit)
 - Windows (64-bit)
 
+[1.3.0]: https://github.com/joa23/linear-cli/compare/v1.2.3...v1.3.0
+[1.2.3]: https://github.com/joa23/linear-cli/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/joa23/linear-cli/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/joa23/linear-cli/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/joa23/linear-cli/compare/v1.0.1...v1.2.0
