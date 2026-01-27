@@ -233,6 +233,45 @@ make test                    # Run unit tests
 ./test-release.sh           # Run comprehensive release test against TEST team
 ```
 
+## Releasing
+
+**IMPORTANT**: Do NOT run `goreleaser` locally. Let GitHub Actions handle the build and upload.
+
+### Release Workflow
+
+1. **Update CHANGELOG.md** with the new version and changes
+2. **Commit** the changelog: `git commit -m "chore: Update CHANGELOG for vX.Y.Z"`
+3. **Create and push tag**:
+   ```bash
+   git tag vX.Y.Z && git push && git push --tags
+   ```
+4. **Wait for GitHub Actions** to complete the release workflow (~2 min)
+   - Monitor at: `gh run watch` or check GitHub Actions tab
+   - The workflow runs goreleaser and uploads all artifacts
+5. **Get checksums** from the release:
+   ```bash
+   gh release download vX.Y.Z --pattern checksums.txt --output -
+   ```
+6. **Update Homebrew formula** (`Formula/linear-cli.rb`):
+   - Update `version "X.Y.Z"`
+   - Update all SHA256 checksums for each platform
+7. **Commit and push formula**:
+   ```bash
+   git add Formula/linear-cli.rb
+   git commit -m "chore: Update formula to vX.Y.Z"
+   git push
+   ```
+8. **Install locally** to verify:
+   ```bash
+   cd /opt/homebrew/Library/Taps/joa23/homebrew-linear-cli && git pull && cd -
+   brew upgrade linear-cli
+   linear --version
+   ```
+
+### Why Not Local goreleaser?
+
+Running `goreleaser release` locally and then having GitHub Actions also run it causes duplicate upload errors. The CI workflow is the source of truth for release artifacts.
+
 ## Session Completion
 
 1. `make test` must pass
