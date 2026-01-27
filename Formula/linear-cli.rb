@@ -4,28 +4,28 @@
 class LinearCli < Formula
   desc "Token-efficient CLI for Linear"
   homepage "https://github.com/joa23/linear-cli"
-  version "1.4.1"
+  version "1.4.2"
   license "MIT"
 
   on_macos do
     on_arm do
       url "https://github.com/joa23/linear-cli/releases/download/v#{version}/linear-cli_Darwin_arm64.tar.gz"
-      sha256 "582e1f6cdca8039ecf05c4bb7843d8c28e5cb3603cffd3c98138e9f3f489f544"
+      sha256 "205d942a01a896c82d361868b13da1419298edbc30cbbd02a887deccd2adfa9c"
     end
     on_intel do
       url "https://github.com/joa23/linear-cli/releases/download/v#{version}/linear-cli_Darwin_x86_64.tar.gz"
-      sha256 "420c78bb573fd408778269add93eedbb13f0f5a15c3dbf8e12e66b4dcb01c114"
+      sha256 "960975c776be8556c5212944a0e3d3058efa864590f91f769f1763288c8e69a8"
     end
   end
 
   on_linux do
     on_arm do
       url "https://github.com/joa23/linear-cli/releases/download/v#{version}/linear-cli_Linux_arm64.tar.gz"
-      sha256 "86993c3409466262565c07196d2f08653df644ccc099ec7b1772329e2b83d2f3"
+      sha256 "0427a233f04030e985629845089991dfaef57a0bf4620ccdd608c860589f3e9b"
     end
     on_intel do
       url "https://github.com/joa23/linear-cli/releases/download/v#{version}/linear-cli_Linux_x86_64.tar.gz"
-      sha256 "35a76823ad1d30df1dbf20070e2cce54176c76a6f3d1d11c34bdd4981ce7d9fe"
+      sha256 "8a50d22f1672bf6d423515865dfcfbcbe962fc6d2d02f15b4ab1ac81c836cc41"
     end
   end
 
