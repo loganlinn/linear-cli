@@ -33,6 +33,8 @@ func NewResolver(client *Client) *Resolver {
 
 // ResolveUser resolves a user identifier (email or name) to a user UUID
 // Supports:
+// - "me" - resolves to the authenticated user
+// - UUIDs - returned as-is (already resolved)
 // - Email addresses: "john@company.com"
 // - Display names: "John Doe"
 // - First names: "John" (errors if ambiguous)
@@ -45,6 +47,20 @@ func (r *Resolver) ResolveUser(nameOrEmail string) (string, error) {
 			Field:   "user",
 			Message: "user identifier cannot be empty",
 		}
+	}
+
+	// Handle special "me" value - resolve to current authenticated user
+	if strings.ToLower(nameOrEmail) == "me" {
+		viewer, err := r.client.Teams.GetViewer()
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve 'me': %w", err)
+		}
+		return viewer.ID, nil
+	}
+
+	// If it's already a UUID, return as-is
+	if identifiers.IsUUID(nameOrEmail) {
+		return nameOrEmail, nil
 	}
 
 	// Check if it's an email
