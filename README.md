@@ -143,10 +143,12 @@ You'll be prompted to choose an authentication mode:
 
 **Personal Use** - Authenticate as yourself
 - Your actions appear under your Linear account
+- `--assignee me` assigns to your personal account
 - For personal task management
 
 **Agent/App** - Authenticate as an agent
 - Agent appears as a separate entity in Linear
+- `--assignee me` assigns to the agent (uses delegate field)
 - Requires admin approval to install
 - Agent can be @mentioned and assigned issues
 - For automation, bots, and integrations
@@ -204,8 +206,15 @@ Once approved, the agent can be @mentioned and assigned issues like any team mem
 ### Other Auth Commands
 
 ```bash
-linear auth status   # Check login status
+linear auth status   # Check login status and auth mode
 linear auth logout   # Remove credentials
+```
+
+The status command shows your current auth mode:
+```
+✅ Logged in to Linear
+User: Your Name (email@example.com)
+Mode: Agent (--assignee me uses delegate)
 ```
 
 ---

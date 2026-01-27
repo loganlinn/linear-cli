@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.5] - 2026-01-27
+
+### Fixed
+
+**OAuth App "me" Resolution:**
+- Fixed `--assignee me` resolving to human account owner instead of OAuth application
+- Root cause: Email suffix detection was unreliable; Linear's viewer query returns inconsistent data
+- Fix: Store auth mode ("user" or "agent") at login time in token file
+- Agent mode: `--assignee me` uses `delegateId` (OAuth app visible in Linear)
+- User mode: `--assignee me` uses `assigneeId` (personal account)
+- Run `linear auth login` and select mode to activate fix
+
+### Changed
+
+- `linear auth status` now displays current auth mode
+- `linear auth login` help text explains mode differences
+- Updated README, CLAUDE.md, and `/linear` skill with auth mode documentation
+
 ## [1.4.4] - 2026-01-27
 
 ### Fixed

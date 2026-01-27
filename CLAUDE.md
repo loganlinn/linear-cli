@@ -27,12 +27,23 @@ internal/token/      # Secure token storage
 
 ### Essential Setup
 
-**ALWAYS run this first** before any other Linear commands:
+**Step 1: Authenticate and set mode**
 ```bash
-linear init  # Select default team - required for cycle operations
+linear auth login    # Choose "Agent" mode for bots/automation
+linear auth status   # Verify: should show "Mode: Agent"
 ```
 
-This creates `.linear.yaml` with your default team. Without this, many commands will fail with "team is required".
+**Step 2: Set default team**
+```bash
+linear init          # Select default team - creates .linear.yaml
+```
+
+### Authentication Modes
+
+- **User mode**: `--assignee me` assigns to the human's Linear account
+- **Agent mode**: `--assignee me` assigns to the OAuth app (delegate), visible as a separate entity in Linear
+
+If `linear auth status` shows "Auth mode not set", re-run `linear auth login`.
 
 ### Output Formats
 

@@ -62,8 +62,8 @@ func (r *Resolver) ResolveUser(nameOrEmail string) (*ResolvedUser, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve 'me': %w", err)
 		}
-		// Detect OAuth applications by their email suffix
-		isApp := strings.HasSuffix(viewer.Email, "@oauthapp.linear.app")
+		// Use auth mode to determine if delegateId should be used
+		isApp := r.client.IsAgentMode()
 		return &ResolvedUser{ID: viewer.ID, IsApplication: isApp}, nil
 	}
 

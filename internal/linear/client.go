@@ -42,10 +42,21 @@ type Client struct {
 
 	// Direct access to API token for compatibility
 	apiToken string
+
+	// authMode stores how the user authenticated: "user", "agent", or "" (legacy token)
+	// When "agent", "me" resolution uses delegateId instead of assigneeId
+	authMode string
 }
 
 // NewClient creates a new Linear API client with all sub-clients initialized
 func NewClient(apiToken string) *Client {
+	return NewClientWithAuthMode(apiToken, "")
+}
+
+// NewClientWithAuthMode creates a new Linear API client with explicit auth mode.
+// authMode should be "user" or "agent". Empty string defaults to email suffix detection
+// for backward compatibility with existing tokens.
+func NewClientWithAuthMode(apiToken string, authMode string) *Client {
 	// Create the base client with shared HTTP functionality
 	base := core.NewBaseClient(apiToken)
 
@@ -61,6 +72,7 @@ func NewClient(apiToken string) *Client {
 		Attachments:   attachments.NewClient(base),
 		Cycles:        cycles.NewClient(base),
 		apiToken:      apiToken,
+		authMode:      authMode,
 	}
 
 	// Initialize resolver with the client
@@ -170,6 +182,18 @@ func (c *Client) SetBase(base *core.BaseClient) {
 // GetBase returns the base client (for testing purposes)
 func (c *Client) GetBase() *core.BaseClient {
 	return c.base
+}
+
+// IsAgentMode returns whether the client is authenticated as an OAuth application
+// When true, "me" resolution will use delegateId instead of assigneeId
+func (c *Client) IsAgentMode() bool {
+	return c.authMode == "agent"
+}
+
+// GetAuthMode returns the authentication mode: "user", "agent", or "" (legacy token)
+// Empty string indicates a legacy token without explicit auth mode
+func (c *Client) GetAuthMode() string {
+	return c.authMode
 }
 
 // TestConnection tests if the client can connect to Linear API

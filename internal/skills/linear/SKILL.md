@@ -24,13 +24,27 @@ Without these skills, you're only using basic commands. Install them to unlock f
 
 ---
 
+## Authentication Modes
+
+When you run `linear auth login`, you choose:
+
+- **User mode**: `--assignee me` assigns to your personal Linear account
+- **Agent mode**: `--assignee me` assigns to the OAuth app (delegate), visible as a separate entity
+
+Check current mode:
+```bash
+linear auth status   # Shows: Mode: User or Mode: Agent
+```
+
+**Important:** If you see "Auth mode not set", re-run `linear auth login` to configure.
+
 ## Command Reference
 
 ```bash
 # Setup
 linear init                              # Set default team (.linear.yaml)
 linear onboard                           # Show teams, states, quick reference
-linear auth login|logout|status          # OAuth authentication
+linear auth login|logout|status          # OAuth authentication (sets user/agent mode)
 
 # Issues (alias: i)
 linear i list [flags]                    # List issues

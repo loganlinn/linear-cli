@@ -235,6 +235,7 @@ func initializeClient() (*linear.Client, error) {
 		return nil, fmt.Errorf("failed to load token: %w", err)
 	}
 
-	// Create client with access token
-	return linear.NewClient(tokenData.AccessToken), nil
+	// Create client with access token and auth mode
+	// Auth mode determines how "me" is resolved (user vs agent/delegate)
+	return linear.NewClientWithAuthMode(tokenData.AccessToken, tokenData.AuthMode), nil
 }

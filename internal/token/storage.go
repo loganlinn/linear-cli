@@ -17,6 +17,7 @@ type TokenData struct {
 	TokenType    string    `json:"token_type"`
 	ExpiresAt    time.Time `json:"expires_at,omitempty"`
 	Scope        string    `json:"scope"`
+	AuthMode     string    `json:"auth_mode,omitempty"` // "user" or "agent" - determines how "me" resolves
 }
 
 // Storage handles token storage and retrieval with secure file permissions.

@@ -37,7 +37,13 @@ func newLoginCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "login",
 		Short: "Authenticate with Linear",
-		Long:  "Authenticate with Linear using OAuth2. Opens your browser for authorization.",
+		Long: `Authenticate with Linear using OAuth2. Opens your browser for authorization.
+
+You'll choose an authentication mode:
+  - User mode:  --assignee me assigns to your personal account
+  - Agent mode: --assignee me assigns to the OAuth app (delegate)
+
+Run 'linear auth status' to check your current mode.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return handleLogin()
 		},
@@ -59,7 +65,11 @@ func newStatusCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
 		Short: "Check Linear authentication status",
-		Long:  "Display your current Linear authentication status and user information.",
+		Long: `Display your current Linear authentication status and user information.
+
+Shows your auth mode which determines how --assignee me behaves:
+  - User mode:  assigns to your personal account
+  - Agent mode: assigns to the OAuth app (delegate)`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return handleStatus()
 		},
@@ -144,8 +154,9 @@ func handleLogin() error {
 		return fmt.Errorf("OAuth callback failed: %w", err)
 	}
 
-	// Convert to structured format and save
+	// Convert to structured format and save with auth mode
 	tokenData := tokenResponse.ToTokenData()
+	tokenData.AuthMode = authMode // Store "user" or "agent" for correct "me" resolution
 	tokenStorage := token.NewStorage(token.GetDefaultTokenPath())
 	if err := tokenStorage.SaveTokenData(tokenData); err != nil {
 		return fmt.Errorf("failed to save token: %w", err)
@@ -325,11 +336,20 @@ func handleStatus() error {
 	}
 
 	// Create Linear client and test connection
-	client := linear.NewClient(tokenData.AccessToken)
+	client := linear.NewClientWithAuthMode(tokenData.AccessToken, tokenData.AuthMode)
 	if viewer, err := client.GetViewer(); err == nil {
 		fmt.Println("✅ Logged in to Linear")
 		fmt.Printf("User: %s (%s)\n", viewer.Name, viewer.Email)
 		fmt.Printf("ID: %s\n", viewer.ID)
+		// Show auth mode
+		switch tokenData.AuthMode {
+		case "agent":
+			fmt.Println("Mode: Agent (--assignee me uses delegate)")
+		case "user":
+			fmt.Println("Mode: User (--assignee me uses assignee)")
+		default:
+			fmt.Println("\n⚠️  Auth mode not set. Run 'linear auth login' to configure.")
+		}
 	} else {
 		fmt.Println("⚠️  Token exists but may be invalid")
 		fmt.Println("Error:", err)
