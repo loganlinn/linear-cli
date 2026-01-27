@@ -13,6 +13,12 @@ import (
 // Default cache TTL for all resolution operations
 const defaultCacheTTL = 5 * time.Minute
 
+// ResolvedUser contains the resolved user ID and whether it's an OAuth application
+type ResolvedUser struct {
+	ID            string
+	IsApplication bool
+}
+
 // Resolver handles intelligent resolution of human-readable identifiers to UUIDs
 // It manages caching and provides smart matching with ambiguity detection
 //
@@ -31,19 +37,20 @@ func NewResolver(client *Client) *Resolver {
 	}
 }
 
-// ResolveUser resolves a user identifier (email or name) to a user UUID
+// ResolveUser resolves a user identifier (email or name) to a ResolvedUser
+// containing the UUID and whether it's an OAuth application.
 // Supports:
 // - "me" - resolves to the authenticated user
-// - UUIDs - returned as-is (already resolved)
+// - UUIDs - returned as-is (already resolved, IsApplication=false)
 // - Email addresses: "john@company.com"
 // - Display names: "John Doe"
 // - First names: "John" (errors if ambiguous)
 //
 // Returns error with suggestions if multiple users match
-func (r *Resolver) ResolveUser(nameOrEmail string) (string, error) {
+func (r *Resolver) ResolveUser(nameOrEmail string) (*ResolvedUser, error) {
 	// Validate input
 	if nameOrEmail == "" {
-		return "", &core.ValidationError{
+		return nil, &core.ValidationError{
 			Field:   "user",
 			Message: "user identifier cannot be empty",
 		}
@@ -53,14 +60,16 @@ func (r *Resolver) ResolveUser(nameOrEmail string) (string, error) {
 	if strings.ToLower(nameOrEmail) == "me" {
 		viewer, err := r.client.Teams.GetViewer()
 		if err != nil {
-			return "", fmt.Errorf("failed to resolve 'me': %w", err)
+			return nil, fmt.Errorf("failed to resolve 'me': %w", err)
 		}
-		return viewer.ID, nil
+		// Detect OAuth applications by their email suffix
+		isApp := strings.HasSuffix(viewer.Email, "@oauthapp.linear.app")
+		return &ResolvedUser{ID: viewer.ID, IsApplication: isApp}, nil
 	}
 
-	// If it's already a UUID, return as-is
+	// If it's already a UUID, return as-is (assume not an application without more info)
 	if identifiers.IsUUID(nameOrEmail) {
-		return nameOrEmail, nil
+		return &ResolvedUser{ID: nameOrEmail, IsApplication: false}, nil
 	}
 
 	// Check if it's an email
@@ -73,10 +82,12 @@ func (r *Resolver) ResolveUser(nameOrEmail string) (string, error) {
 }
 
 // resolveUserByEmail resolves a user by their email address
-func (r *Resolver) resolveUserByEmail(email string) (string, error) {
+func (r *Resolver) resolveUserByEmail(email string) (*ResolvedUser, error) {
 	// Check cache first
 	if userID, found := r.cache.getUserByEmail(email); found {
-		return userID, nil
+		// Detect OAuth applications by email suffix
+		isApp := strings.HasSuffix(email, "@oauthapp.linear.app")
+		return &ResolvedUser{ID: userID, IsApplication: isApp}, nil
 	}
 
 	// Use the existing GetUserByEmail method
@@ -84,27 +95,30 @@ func (r *Resolver) resolveUserByEmail(email string) (string, error) {
 	if err != nil {
 		// If not found, return helpful error
 		if core.IsNotFoundError(err) {
-			return "", &core.NotFoundError{
+			return nil, &core.NotFoundError{
 				ResourceType: "user",
 				ResourceID:   email,
 			}
 		}
-		return "", fmt.Errorf("failed to resolve user by email: %w", err)
+		return nil, fmt.Errorf("failed to resolve user by email: %w", err)
 	}
 
 	// Cache the result
 	r.cache.setUserByEmail(email, user.ID)
 	r.cache.setUserByName(user.Name, user.ID)
 
-	return user.ID, nil
+	// Detect OAuth applications by email suffix
+	isApp := strings.HasSuffix(user.Email, "@oauthapp.linear.app")
+	return &ResolvedUser{ID: user.ID, IsApplication: isApp}, nil
 }
 
 // resolveUserByName resolves a user by their name (display name or full name)
 // Performs fuzzy matching and errors if multiple matches are found
-func (r *Resolver) resolveUserByName(name string) (string, error) {
+func (r *Resolver) resolveUserByName(name string) (*ResolvedUser, error) {
 	// Check cache first
 	if userID, found := r.cache.getUserByName(name); found {
-		return userID, nil
+		// Can't determine IsApplication from cache without email, assume false
+		return &ResolvedUser{ID: userID, IsApplication: false}, nil
 	}
 
 	// Use Linear's displayName filter for efficient server-side search
@@ -112,7 +126,7 @@ func (r *Resolver) resolveUserByName(name string) (string, error) {
 	activeOnly := true
 	users, err := r.client.Teams.ListUsersWithDisplayNameFilter(name, &activeOnly, 10)
 	if err != nil {
-		return "", fmt.Errorf("failed to list users for name resolution: %w", err)
+		return nil, fmt.Errorf("failed to list users for name resolution: %w", err)
 	}
 
 	// Find matching users
@@ -136,7 +150,7 @@ func (r *Resolver) resolveUserByName(name string) (string, error) {
 
 	// Handle no matches
 	if len(matches) == 0 {
-		return "", &core.NotFoundError{
+		return nil, &core.NotFoundError{
 			ResourceType: "user",
 			ResourceID:   name,
 		}
@@ -150,7 +164,7 @@ func (r *Resolver) resolveUserByName(name string) (string, error) {
 			suggestions = append(suggestions, fmt.Sprintf("%s (%s)", user.Name, user.Email))
 		}
 
-		return "", &guidance.ErrorWithGuidance{
+		return nil, &guidance.ErrorWithGuidance{
 			Operation: "Resolve user",
 			Reason:    fmt.Sprintf("multiple users match '%s'", name),
 			Guidance: []string{
@@ -179,7 +193,9 @@ linear_update_issue("CEN-123", {assigneeId: "%s"})`,
 	r.cache.setUserByName(name, user.ID)
 	r.cache.setUserByEmail(user.Email, user.ID)
 
-	return user.ID, nil
+	// Detect OAuth applications by email suffix
+	isApp := strings.HasSuffix(user.Email, "@oauthapp.linear.app")
+	return &ResolvedUser{ID: user.ID, IsApplication: isApp}, nil
 }
 
 // ResolveTeam resolves a team identifier (name or key) to a team UUID

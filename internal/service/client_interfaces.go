@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/joa23/linear-cli/internal/linear"
 	"github.com/joa23/linear-cli/internal/linear/comments"
 	"github.com/joa23/linear-cli/internal/linear/core"
 	"github.com/joa23/linear-cli/internal/linear/cycles"
@@ -25,7 +26,7 @@ type IssueClientOperations interface {
 
 	// Resolver operations
 	ResolveTeamIdentifier(keyOrName string) (string, error)
-	ResolveUserIdentifier(nameOrEmail string) (string, error)
+	ResolveUserIdentifier(nameOrEmail string) (*linear.ResolvedUser, error)
 	ResolveCycleIdentifier(numberOrNameOrID, teamID string) (string, error)
 	ResolveLabelIdentifier(labelName, teamID string) (string, error)
 
@@ -49,7 +50,7 @@ type CycleClientOperations interface {
 	// Resolver operations
 	ResolveTeamIdentifier(keyOrName string) (string, error)
 	ResolveCycleIdentifier(numberOrNameOrID, teamID string) (string, error)
-	ResolveUserIdentifier(nameOrEmail string) (string, error)
+	ResolveUserIdentifier(nameOrEmail string) (*linear.ResolvedUser, error)
 
 	// Sub-client access (Phase 2 - use sub-clients directly)
 	CycleClient() *cycles.Client
@@ -62,7 +63,7 @@ type ProjectClientOperations interface {
 
 	// Resolver operations
 	ResolveTeamIdentifier(keyOrName string) (string, error)
-	ResolveUserIdentifier(nameOrEmail string) (string, error)
+	ResolveUserIdentifier(nameOrEmail string) (*linear.ResolvedUser, error)
 
 	// Sub-client access (Phase 2 - use sub-clients directly)
 	ProjectClient() *projects.Client
@@ -75,7 +76,7 @@ type UserClientOperations interface {
 	GetUser(idOrEmail string) (*core.User, error)
 
 	// Resolver operations
-	ResolveUserIdentifier(nameOrEmail string) (string, error)
+	ResolveUserIdentifier(nameOrEmail string) (*linear.ResolvedUser, error)
 	ResolveTeamIdentifier(keyOrName string) (string, error)
 
 	// Sub-client access (Phase 2 - use sub-clients directly)
@@ -90,7 +91,7 @@ type SearchClientOperations interface {
 
 	// Resolver operations
 	ResolveTeamIdentifier(keyOrName string) (string, error)
-	ResolveUserIdentifier(nameOrEmail string) (string, error)
+	ResolveUserIdentifier(nameOrEmail string) (*linear.ResolvedUser, error)
 	ResolveCycleIdentifier(numberOrNameOrID, teamID string) (string, error)
 
 	// Sub-client access (Phase 2 - use sub-clients directly)

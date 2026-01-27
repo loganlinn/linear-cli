@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-01-27
+
+### Fixed
+
+**OAuth Application Assignee Support:**
+- Fixed `--assignee me` silently failing when authenticated as an OAuth application
+- Issue: Linear uses `delegateId` for apps but `assigneeId` for humans; we only used `assigneeId`
+- Fix: Auto-detect user type by email suffix (`@oauthapp.linear.app`) and use appropriate field
+- Detection happens at resolution time via new `ResolvedUser` struct with `IsApplication` flag
+- Applies to: `linear issues create --assignee`, `linear issues update --assignee`
+- Example: `linear issues update CEN-123 --assignee me` now works for OAuth apps
+- Added comprehensive test coverage for delegate vs assignee routing
+
+### Added
+
+**Test Coverage:**
+- `resolver_test.go` - Tests for OAuth application email detection (8 test cases)
+- `client_test.go` - Tests for `delegateId` in GraphQL input building (10 test cases)
+- `issue_delegate_test.go` - Tests for service layer routing logic
+
 ## [1.4.2] - 2026-01-27
 
 ### Fixed
@@ -270,6 +290,10 @@ A token-efficient CLI for Linear.
 - Linux (64-bit)
 - Windows (64-bit)
 
+[1.4.3]: https://github.com/joa23/linear-cli/compare/v1.4.2...v1.4.3
+[1.4.2]: https://github.com/joa23/linear-cli/compare/v1.4.1...v1.4.2
+[1.4.1]: https://github.com/joa23/linear-cli/compare/v1.4.0...v1.4.1
+[1.4.0]: https://github.com/joa23/linear-cli/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/joa23/linear-cli/compare/v1.2.3...v1.3.0
 [1.2.3]: https://github.com/joa23/linear-cli/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/joa23/linear-cli/compare/v1.2.1...v1.2.2

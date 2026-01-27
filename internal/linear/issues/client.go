@@ -1514,6 +1514,7 @@ func hasFieldsToUpdate(input core.UpdateIssueInput) bool {
 		input.DueDate != nil ||
 		input.StateID != nil ||
 		input.AssigneeID != nil ||
+		input.DelegateID != nil ||
 		input.ProjectID != nil ||
 		input.ParentID != nil ||
 		input.TeamID != nil ||
@@ -1524,7 +1525,7 @@ func hasFieldsToUpdate(input core.UpdateIssueInput) bool {
 // buildUpdateInput builds the GraphQL input object from UpdateIssueInput
 func buildUpdateInput(input core.UpdateIssueInput) map[string]interface{} {
 	updateInput := make(map[string]interface{})
-	
+
 	if input.Title != nil {
 		updateInput["title"] = *input.Title
 	}
@@ -1559,7 +1560,7 @@ func buildUpdateInput(input core.UpdateIssueInput) map[string]interface{} {
 		updateInput["cycleId"] = *input.CycleID
 	}
 
-	// Handle assignee ID with nullable input
+	// Handle assignee ID with nullable input (for human users)
 	if input.AssigneeID != nil {
 		if *input.AssigneeID == "" {
 			// Unassign - use null
@@ -1567,6 +1568,17 @@ func buildUpdateInput(input core.UpdateIssueInput) map[string]interface{} {
 		} else {
 			// Assign to user - just pass the string directly
 			updateInput["assigneeId"] = *input.AssigneeID
+		}
+	}
+
+	// Handle delegate ID with nullable input (for OAuth applications)
+	if input.DelegateID != nil {
+		if *input.DelegateID == "" {
+			// Remove delegation - use null
+			updateInput["delegateId"] = nil
+		} else {
+			// Delegate to application
+			updateInput["delegateId"] = *input.DelegateID
 		}
 	}
 

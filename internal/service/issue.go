@@ -90,11 +90,11 @@ func (s *IssueService) Search(filters *SearchFilters) (string, error) {
 
 	// Resolve assignee identifier if provided
 	if filters.AssigneeID != "" {
-		userID, err := s.client.ResolveUserIdentifier(filters.AssigneeID)
+		resolved, err := s.client.ResolveUserIdentifier(filters.AssigneeID)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve user '%s': %w", filters.AssigneeID, err)
 		}
-		linearFilters.AssigneeID = userID
+		linearFilters.AssigneeID = resolved.ID
 	}
 
 	// Resolve cycle identifier if provided (requires team)
@@ -158,11 +158,11 @@ func (s *IssueService) SearchWithOutput(filters *SearchFilters, verbosity format
 
 	// Resolve assignee identifier if provided
 	if filters.AssigneeID != "" {
-		userID, err := s.client.ResolveUserIdentifier(filters.AssigneeID)
+		resolved, err := s.client.ResolveUserIdentifier(filters.AssigneeID)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve user '%s': %w", filters.AssigneeID, err)
 		}
-		linearFilters.AssigneeID = userID
+		linearFilters.AssigneeID = resolved.ID
 	}
 
 	// Resolve cycle identifier if provided (requires team)
@@ -376,11 +376,16 @@ func (s *IssueService) Create(input *CreateIssueInput) (string, error) {
 	}
 	if input.AssigneeID != "" {
 		// Resolve user identifier
-		userID, err := s.client.ResolveUserIdentifier(input.AssigneeID)
+		resolved, err := s.client.ResolveUserIdentifier(input.AssigneeID)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve user '%s': %w", input.AssigneeID, err)
 		}
-		updateInput.AssigneeID = &userID
+		// Use delegateId for OAuth applications, assigneeId for human users
+		if resolved.IsApplication {
+			updateInput.DelegateID = &resolved.ID
+		} else {
+			updateInput.AssigneeID = &resolved.ID
+		}
 		needsUpdate = true
 	}
 	if input.Priority != nil {
@@ -517,11 +522,16 @@ func (s *IssueService) Update(identifier string, input *UpdateIssueInput) (strin
 			// Empty string means unassign
 			linearInput.AssigneeID = input.AssigneeID
 		} else {
-			userID, err := s.client.ResolveUserIdentifier(*input.AssigneeID)
+			resolved, err := s.client.ResolveUserIdentifier(*input.AssigneeID)
 			if err != nil {
 				return "", fmt.Errorf("failed to resolve user '%s': %w", *input.AssigneeID, err)
 			}
-			linearInput.AssigneeID = &userID
+			// Use delegateId for OAuth applications, assigneeId for human users
+			if resolved.IsApplication {
+				linearInput.DelegateID = &resolved.ID
+			} else {
+				linearInput.AssigneeID = &resolved.ID
+			}
 		}
 	}
 

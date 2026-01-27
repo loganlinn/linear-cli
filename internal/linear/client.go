@@ -288,16 +288,29 @@ func (c *Client) AssignIssue(identifierOrID, assigneeNameOrEmail string) error {
 
 	// Resolve assignee name/email to UUID if needed
 	// Empty string is allowed for unassignment
-	assigneeID := assigneeNameOrEmail
-	if assigneeNameOrEmail != "" && !identifiers.IsUUID(assigneeNameOrEmail) {
-		resolvedID, err := c.resolver.ResolveUser(assigneeNameOrEmail)
-		if err != nil {
-			return err
-		}
-		assigneeID = resolvedID
+	if assigneeNameOrEmail == "" {
+		return c.Issues.AssignIssue(issueID, "")
 	}
 
-	return c.Issues.AssignIssue(issueID, assigneeID)
+	if identifiers.IsUUID(assigneeNameOrEmail) {
+		return c.Issues.AssignIssue(issueID, assigneeNameOrEmail)
+	}
+
+	resolved, err := c.resolver.ResolveUser(assigneeNameOrEmail)
+	if err != nil {
+		return err
+	}
+
+	// For OAuth applications, use UpdateIssue with delegateId
+	if resolved.IsApplication {
+		input := core.UpdateIssueInput{
+			DelegateID: &resolved.ID,
+		}
+		_, err := c.Issues.UpdateIssue(issueID, input)
+		return err
+	}
+
+	return c.Issues.AssignIssue(issueID, resolved.ID)
 }
 
 func (c *Client) ListAssignedIssues(limit int) ([]core.Issue, error) {
@@ -345,12 +358,18 @@ func (c *Client) UpdateIssue(identifierOrID string, input core.UpdateIssueInput)
 	}
 
 	// Resolve AssigneeID (name/email to UUID)
+	// Use delegateId for OAuth applications, assigneeId for human users
 	if input.AssigneeID != nil && *input.AssigneeID != "" && !identifiers.IsUUID(*input.AssigneeID) {
-		resolvedID, err := c.resolver.ResolveUser(*input.AssigneeID)
+		resolved, err := c.resolver.ResolveUser(*input.AssigneeID)
 		if err != nil {
 			return nil, err
 		}
-		input.AssigneeID = &resolvedID
+		if resolved.IsApplication {
+			input.DelegateID = &resolved.ID
+			input.AssigneeID = nil // Clear assigneeId when using delegateId
+		} else {
+			input.AssigneeID = &resolved.ID
+		}
 	}
 
 	// Resolve ParentID (identifier to UUID)
@@ -581,10 +600,13 @@ func (c *Client) ListUsersWithPagination(filter *core.UserFilter) (*core.ListUse
 
 func (c *Client) GetUser(idOrEmail string) (*core.User, error) {
 	// First try to resolve as email or name
-	userID, err := c.resolver.ResolveUser(idOrEmail)
+	var userIDStr string
+	resolved, err := c.resolver.ResolveUser(idOrEmail)
 	if err != nil {
 		// If resolution fails, assume it's already a UUID
-		userID = idOrEmail
+		userIDStr = idOrEmail
+	} else {
+		userIDStr = resolved.ID
 	}
 
 	// Get user by listing with no filters and finding the matching ID
@@ -594,7 +616,7 @@ func (c *Client) GetUser(idOrEmail string) (*core.User, error) {
 	}
 
 	for _, user := range users {
-		if user.ID == userID || user.Email == idOrEmail {
+		if user.ID == userIDStr || user.Email == idOrEmail {
 			return &user, nil
 		}
 	}
@@ -611,7 +633,7 @@ func (c *Client) ResolveIssueIdentifier(identifier string) (string, error) {
 	return c.resolver.ResolveIssue(identifier)
 }
 
-func (c *Client) ResolveUserIdentifier(nameOrEmail string) (string, error) {
+func (c *Client) ResolveUserIdentifier(nameOrEmail string) (*ResolvedUser, error) {
 	return c.resolver.ResolveUser(nameOrEmail)
 }
 

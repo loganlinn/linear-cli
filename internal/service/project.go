@@ -243,11 +243,11 @@ func (s *ProjectService) Update(projectID string, input *UpdateProjectInput) (st
 	if input.LeadID != nil {
 		// Resolve lead user identifier
 		if *input.LeadID != "" {
-			userID, err := s.client.ResolveUserIdentifier(*input.LeadID)
+			resolved, err := s.client.ResolveUserIdentifier(*input.LeadID)
 			if err != nil {
 				return "", fmt.Errorf("failed to resolve lead '%s': %w", *input.LeadID, err)
 			}
-			linearInput.LeadID = &userID
+			linearInput.LeadID = &resolved.ID
 		} else {
 			linearInput.LeadID = input.LeadID
 		}

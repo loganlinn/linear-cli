@@ -238,10 +238,11 @@ func (s *CycleService) Analyze(input *AnalyzeInput) (string, error) {
 	// Resolve assignee if provided
 	var assigneeID string
 	if input.AssigneeID != "" {
-		assigneeID, err = s.client.ResolveUserIdentifier(input.AssigneeID)
+		resolved, err := s.client.ResolveUserIdentifier(input.AssigneeID)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve user '%s': %w", input.AssigneeID, err)
 		}
+		assigneeID = resolved.ID
 	}
 
 	// Get past cycles
@@ -335,10 +336,11 @@ func (s *CycleService) AnalyzeWithOutput(input *AnalyzeInput, verbosity format.V
 	// Resolve assignee if provided
 	var assigneeID string
 	if input.AssigneeID != "" {
-		assigneeID, err = s.client.ResolveUserIdentifier(input.AssigneeID)
+		resolved, err := s.client.ResolveUserIdentifier(input.AssigneeID)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve user '%s': %w", input.AssigneeID, err)
 		}
+		assigneeID = resolved.ID
 	}
 
 	// Get past cycles

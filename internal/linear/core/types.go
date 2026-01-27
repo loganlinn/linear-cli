@@ -618,7 +618,8 @@ type UpdateIssueInput struct {
 	Estimate    *float64 `json:"estimate,omitempty"`    // Story points estimate
 	DueDate     *string  `json:"dueDate,omitempty"`     // ISO 8601 date format
 	StateID     *string  `json:"stateId,omitempty"`     // Workflow state ID
-	AssigneeID  *string  `json:"assigneeId,omitempty"`  // User ID to assign to
+	AssigneeID  *string  `json:"assigneeId,omitempty"`  // User ID to assign to (for human users)
+	DelegateID  *string  `json:"delegateId,omitempty"`  // Application ID to delegate to (for OAuth apps)
 	ProjectID   *string  `json:"projectId,omitempty"`   // Project ID to move issue to
 	ParentID    *string  `json:"parentId,omitempty"`    // Parent issue ID for sub-issues
 	TeamID      *string  `json:"teamId,omitempty"`      // Team ID to move issue to

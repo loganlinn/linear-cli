@@ -52,12 +52,12 @@ func (s *UserService) GetViewerWithOutput(verbosity format.Verbosity, outputType
 // Get retrieves a single user by identifier (email, name, or ID) (legacy method)
 func (s *UserService) Get(identifier string) (string, error) {
 	// Resolve user identifier
-	userID, err := s.client.ResolveUserIdentifier(identifier)
+	resolved, err := s.client.ResolveUserIdentifier(identifier)
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve user '%s': %w", identifier, err)
 	}
 
-	user, err := s.client.GetUser(userID)
+	user, err := s.client.GetUser(resolved.ID)
 	if err != nil {
 		return "", fmt.Errorf("failed to get user: %w", err)
 	}
@@ -68,12 +68,12 @@ func (s *UserService) Get(identifier string) (string, error) {
 // GetWithOutput retrieves a single user with new renderer architecture
 func (s *UserService) GetWithOutput(identifier string, verbosity format.Verbosity, outputType format.OutputType) (string, error) {
 	// Resolve user identifier
-	userID, err := s.client.ResolveUserIdentifier(identifier)
+	resolved, err := s.client.ResolveUserIdentifier(identifier)
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve user '%s': %w", identifier, err)
 	}
 
-	user, err := s.client.GetUser(userID)
+	user, err := s.client.GetUser(resolved.ID)
 	if err != nil {
 		return "", fmt.Errorf("failed to get user: %w", err)
 	}
@@ -184,10 +184,10 @@ func (s *UserService) ResolveByName(name string) (string, error) {
 	}
 
 	// Use the client's resolver for name/email resolution
-	userID, err := s.client.ResolveUserIdentifier(name)
+	resolved, err := s.client.ResolveUserIdentifier(name)
 	if err != nil {
 		return "", err
 	}
 
-	return userID, nil
+	return resolved.ID, nil
 }

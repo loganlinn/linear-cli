@@ -92,11 +92,11 @@ func (s *SearchService) searchIssues(opts *SearchOptions) (string, error) {
 
 	// Resolve assignee identifier if provided
 	if opts.AssigneeID != "" {
-		userID, err := s.client.ResolveUserIdentifier(opts.AssigneeID)
+		resolved, err := s.client.ResolveUserIdentifier(opts.AssigneeID)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve user '%s': %w", opts.AssigneeID, err)
 		}
-		filters.AssigneeID = userID
+		filters.AssigneeID = resolved.ID
 	}
 
 	// Resolve cycle identifier if provided (requires team)
