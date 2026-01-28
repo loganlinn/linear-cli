@@ -37,8 +37,9 @@ type resolverCache struct {
 	// Label resolution cache (keyed by teamID:labelName)
 	labelByName map[string]*cacheEntry // teamID:labelName → labelID
 
-	mu  sync.RWMutex
-	ttl time.Duration
+	mu       sync.RWMutex
+	ttl      time.Duration
+	stopChan chan struct{}
 }
 
 // newResolverCache creates a new resolver cache with the specified TTL
@@ -51,6 +52,7 @@ func newResolverCache(ttl time.Duration) *resolverCache {
 		issueByIdentifier: make(map[string]*cacheEntry),
 		labelByName:       make(map[string]*cacheEntry),
 		ttl:               ttl,
+		stopChan:          make(chan struct{}),
 	}
 
 	// Start background cleanup goroutine
@@ -253,9 +255,19 @@ func (rc *resolverCache) runCleanup() {
 	ticker := time.NewTicker(rc.ttl / 2)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		rc.cleanup()
+	for {
+		select {
+		case <-ticker.C:
+			rc.cleanup()
+		case <-rc.stopChan:
+			return
+		}
 	}
+}
+
+// Stop stops the background cleanup goroutine
+func (rc *resolverCache) Stop() {
+	close(rc.stopChan)
 }
 
 // clear removes all entries from the cache
