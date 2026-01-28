@@ -36,21 +36,23 @@ type CacheEntry struct {
 
 // AttachmentCache provides in-memory caching for processed attachments
 type AttachmentCache struct {
-	entries map[string]*CacheEntry
-	mu      sync.RWMutex
-	ttl     time.Duration
+	entries  map[string]*CacheEntry
+	mu       sync.RWMutex
+	ttl      time.Duration
+	stopChan chan struct{}
 }
 
 // NewAttachmentCache creates a new attachment cache with specified TTL
 func NewAttachmentCache(ttl time.Duration) *AttachmentCache {
 	cache := &AttachmentCache{
-		entries: make(map[string]*CacheEntry),
-		ttl:     ttl,
+		entries:  make(map[string]*CacheEntry),
+		ttl:      ttl,
+		stopChan: make(chan struct{}),
 	}
-	
+
 	// Start cleanup goroutine
 	go cache.cleanupExpired()
-	
+
 	return cache
 }
 
@@ -522,13 +524,20 @@ func (cache *AttachmentCache) Size() int {
 func (cache *AttachmentCache) cleanupExpired() {
 	ticker := time.NewTicker(5 * time.Minute) // Run cleanup every 5 minutes
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
 			cache.removeExpiredEntries()
+		case <-cache.stopChan:
+			return
 		}
 	}
+}
+
+// Stop stops the background cleanup goroutine
+func (cache *AttachmentCache) Stop() {
+	close(cache.stopChan)
 }
 
 // removeExpiredEntries removes all expired entries from the cache
