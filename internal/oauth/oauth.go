@@ -393,9 +393,12 @@ func (a *RefresherAdapter) RefreshAccessToken(refreshToken string) (*token.Token
 	return tokenResp.ToTokenData(), nil
 }
 
-// GenerateState generates a random state parameter for OAuth
+// GenerateState generates a cryptographically secure random state parameter for OAuth.
+// Panics if crypto/rand fails, as this indicates a critical system issue.
 func GenerateState() string {
 	bytes := make([]byte, 16)
-	rand.Read(bytes)
+	if _, err := rand.Read(bytes); err != nil {
+		panic(fmt.Sprintf("crypto/rand.Read failed: %v", err))
+	}
 	return hex.EncodeToString(bytes)
 }
