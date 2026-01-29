@@ -192,53 +192,63 @@ make build
 ./bin/linear issues list --limit 1
 ```
 
-### Step 8: Create Release
+### Step 8: Execute Release
 
-Only after ALL previous steps pass:
+Only after ALL previous steps pass. **IMPORTANT: Do NOT run goreleaser locally — GitHub Actions handles the build.**
 
 ```bash
-# 1. Create annotated tag
-git tag -a vX.Y.Z -m "Release vX.Y.Z - <Brief summary>
+# 1. Commit any pending changes (CHANGELOG, code fixes)
+git add -A
+git commit -m "fix: Description of changes
 
-<Copy key points from CHANGELOG>
-"
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+git push origin main
 
-# 2. Push tag
-git push origin vX.Y.Z
+# 2. Create and push tag (this triggers GitHub Actions)
+git tag vX.Y.Z && git push origin vX.Y.Z
 
-# 3. Run goreleaser
-export GITHUB_TOKEN=$(gh auth token)
-goreleaser release --clean
+# 3. Wait for GitHub Actions to complete (~2 minutes)
+gh run watch --exit-status
 
-# 4. Update Homebrew formula (after goreleaser completes)
-# - Update version in Formula/linear-cli.rb
-# - Update SHA256 checksums from dist/checksums.txt
-# - Commit and push
+# 4. Get checksums from the release
+gh release download vX.Y.Z --pattern checksums.txt --output -
 
+# 5. Update Homebrew formula with new version and SHA256 checksums
+# Edit Formula/linear-cli.rb:
+#   - version "X.Y.Z"
+#   - Update all sha256 values for each platform
+
+# 6. Commit and push formula
 git add Formula/linear-cli.rb
-git commit -m "chore: Update Homebrew formula to vX.Y.Z"
+git commit -m "chore: Update formula to vX.Y.Z"
 git push origin main
 ```
 
-### Step 9: Verify Release
+### Step 9: Install and Verify
 
 ```bash
-# 1. Check GitHub release was created
-open "https://github.com/USER/REPO/releases/tag/vX.Y.Z"
+# 1. Update the local Homebrew tap
+cd /opt/homebrew/Library/Taps/joa23/homebrew-linear-cli && git pull && cd -
 
-# 2. Uninstall old version
-brew uninstall linear-cli
+# 2. Upgrade via Homebrew
+brew upgrade linear-cli
 
-# 3. Install new version from Homebrew
-brew update
-brew install linear-cli
-
-# 4. Verify version
+# 3. Verify version
 linear --version
 
+# 4. Test the fix (example: if you fixed state filtering)
+linear issues list --state "In Progress" --team TEST --limit 1
+
 # 5. Test critical functionality
-linear search --help
-linear skills list
+linear --help
+linear issues list --limit 1
+```
+
+**If upgrade fails or wrong version:**
+```bash
+# Force reinstall
+brew uninstall linear-cli
+brew install linear-cli
 ```
 
 ## Release Checklist Template
@@ -267,18 +277,21 @@ Copy this checklist before each release:
 - [ ] Built and smoke tested (`make build`)
 
 ### Release
-- [ ] Created annotated tag (`git tag -a vX.Y.Z`)
-- [ ] Pushed tag (`git push origin vX.Y.Z`)
-- [ ] Ran goreleaser successfully
+- [ ] Committed all changes with proper message
+- [ ] Pushed to main
+- [ ] Created and pushed tag (`git tag vX.Y.Z && git push origin vX.Y.Z`)
+- [ ] Waited for GitHub Actions (`gh run watch --exit-status`)
+- [ ] Downloaded checksums (`gh release download vX.Y.Z --pattern checksums.txt --output -`)
 - [ ] Updated Homebrew formula
   - [ ] Version number
-  - [ ] SHA256 checksums
-  - [ ] Committed and pushed
+  - [ ] All SHA256 checksums (Darwin arm64, Darwin x86_64, Linux arm64, Linux x86_64)
+  - [ ] Committed and pushed formula
 
 ### Post-Release
-- [ ] Verified GitHub release exists
-- [ ] Tested Homebrew install
+- [ ] Updated local Homebrew tap (`cd /opt/homebrew/.../homebrew-linear-cli && git pull`)
+- [ ] Upgraded via Homebrew (`brew upgrade linear-cli`)
 - [ ] Verified `linear --version` shows correct version
+- [ ] Manually tested the fix/feature
 - [ ] Smoke tested critical commands
 ```
 
@@ -418,14 +431,22 @@ Assistant (using /release skill):
   Testing: ./bin/linear search --help
   ✅ Build successful, commands working
   
-  **Step 8: Ready to Release**
-  ✅ All checks passed! You can now:
-  
-  1. Create tag: git tag -a v1.2.0 -m "Release v1.2.0"
-  2. Push tag: git push origin v1.2.0
-  3. Run goreleaser: export GITHUB_TOKEN=$(gh auth token) && goreleaser release --clean
-  4. Update Formula/linear-cli.rb with new SHA256 checksums
-  5. Commit and push formula
+  **Step 8: Execute Release**
+  ✅ All checks passed! Executing release:
+
+  1. git add -A && git commit -m "..." && git push origin main
+  2. git tag v1.2.0 && git push origin v1.2.0
+  3. gh run watch --exit-status  # Wait for GitHub Actions
+  4. gh release download v1.2.0 --pattern checksums.txt --output -
+  5. [Update Formula/linear-cli.rb with checksums]
+  6. git add Formula/linear-cli.rb && git commit && git push
+
+  **Step 9: Install and Verify**
+  cd /opt/homebrew/Library/Taps/joa23/homebrew-linear-cli && git pull && cd -
+  brew upgrade linear-cli
+  linear --version  # Shows v1.2.0
+  linear search --help  # Test the new feature
+  ✅ Release complete!
 ```
 
 This systematic approach caught the missing CHANGELOG entry!
