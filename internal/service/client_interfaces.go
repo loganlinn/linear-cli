@@ -93,9 +93,11 @@ type SearchClientOperations interface {
 	ResolveTeamIdentifier(keyOrName string) (string, error)
 	ResolveUserIdentifier(nameOrEmail string) (*linear.ResolvedUser, error)
 	ResolveCycleIdentifier(numberOrNameOrID, teamID string) (string, error)
+	ResolveLabelIdentifier(labelName, teamID string) (string, error)
 
 	// Sub-client access (Phase 2 - use sub-clients directly)
 	IssueClient() *issues.Client
 	ProjectClient() *projects.Client
 	TeamClient() *teams.Client
+	WorkflowClient() *workflows.Client
 }

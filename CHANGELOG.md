@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.6] - 2026-01-28
+
+### Fixed
+
+**State/Label Resolution in Search (GitHub #3):**
+- Fixed `--state` and `--labels` filters failing with "GraphQL error: Argument Validation Error" on search commands
+- Issue: `linear issues list --state "In Progress"` and `linear search --labels "bug"` passed raw names to the API, which expects UUIDs
+- Root cause: `Search`, `SearchWithOutput`, and `searchIssues` copied state/label filters directly without resolving names to IDs (unlike `create`/`update` which already resolved correctly)
+- Fix: Added name-to-UUID resolution for state and label filters in all three search methods
+- `--team` flag is now required when filtering by `--state` or `--labels` (states and labels are team-scoped)
+- Example: `linear issues list --state "In Progress" --team CEN` now works correctly
+
 ## [1.4.5] - 2026-01-27
 
 ### Fixed
@@ -335,6 +347,8 @@ A token-efficient CLI for Linear.
 - Linux (64-bit)
 - Windows (64-bit)
 
+[1.4.6]: https://github.com/joa23/linear-cli/compare/v1.4.5...v1.4.6
+[1.4.5]: https://github.com/joa23/linear-cli/compare/v1.4.4...v1.4.5
 [1.4.4]: https://github.com/joa23/linear-cli/compare/v1.4.3...v1.4.4
 [1.4.3]: https://github.com/joa23/linear-cli/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/joa23/linear-cli/compare/v1.4.1...v1.4.2
