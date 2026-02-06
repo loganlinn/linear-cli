@@ -109,9 +109,31 @@ func (s *IssueService) Search(filters *SearchFilters) (string, error) {
 		linearFilters.CycleID = cycleID
 	}
 
+	// Resolve state names to IDs (requires team)
+	if len(filters.StateIDs) > 0 {
+		if linearFilters.TeamID == "" {
+			return "", fmt.Errorf("--team is required when filtering by state")
+		}
+		resolvedStates, err := s.resolveStateIDs(filters.StateIDs, linearFilters.TeamID)
+		if err != nil {
+			return "", err
+		}
+		linearFilters.StateIDs = resolvedStates
+	}
+
+	// Resolve label names to IDs (requires team)
+	if len(filters.LabelIDs) > 0 {
+		if linearFilters.TeamID == "" {
+			return "", fmt.Errorf("--team is required when filtering by labels")
+		}
+		resolvedLabels, err := s.resolveLabelIDs(filters.LabelIDs, linearFilters.TeamID)
+		if err != nil {
+			return "", err
+		}
+		linearFilters.LabelIDs = resolvedLabels
+	}
+
 	// Copy remaining filters
-	linearFilters.StateIDs = filters.StateIDs
-	linearFilters.LabelIDs = filters.LabelIDs
 	linearFilters.Priority = filters.Priority
 	linearFilters.SearchTerm = filters.SearchTerm
 
@@ -177,9 +199,31 @@ func (s *IssueService) SearchWithOutput(filters *SearchFilters, verbosity format
 		linearFilters.CycleID = cycleID
 	}
 
+	// Resolve state names to IDs (requires team)
+	if len(filters.StateIDs) > 0 {
+		if linearFilters.TeamID == "" {
+			return "", fmt.Errorf("--team is required when filtering by state")
+		}
+		resolvedStates, err := s.resolveStateIDs(filters.StateIDs, linearFilters.TeamID)
+		if err != nil {
+			return "", err
+		}
+		linearFilters.StateIDs = resolvedStates
+	}
+
+	// Resolve label names to IDs (requires team)
+	if len(filters.LabelIDs) > 0 {
+		if linearFilters.TeamID == "" {
+			return "", fmt.Errorf("--team is required when filtering by labels")
+		}
+		resolvedLabels, err := s.resolveLabelIDs(filters.LabelIDs, linearFilters.TeamID)
+		if err != nil {
+			return "", err
+		}
+		linearFilters.LabelIDs = resolvedLabels
+	}
+
 	// Copy remaining filters
-	linearFilters.StateIDs = filters.StateIDs
-	linearFilters.LabelIDs = filters.LabelIDs
 	linearFilters.Priority = filters.Priority
 	linearFilters.SearchTerm = filters.SearchTerm
 
@@ -529,6 +573,8 @@ func (s *IssueService) Update(identifier string, input *UpdateIssueInput) (strin
 			// Use delegateId for OAuth applications, assigneeId for human users
 			if resolved.IsApplication {
 				linearInput.DelegateID = &resolved.ID
+				empty := ""
+				linearInput.AssigneeID = &empty // Clear existing assignee when delegating
 			} else {
 				linearInput.AssigneeID = &resolved.ID
 			}
@@ -714,4 +760,30 @@ func (s *IssueService) resolveStateID(stateName, teamID string) (string, error) 
 	}
 
 	return state.ID, nil
+}
+
+// resolveStateIDs resolves a list of state names to state IDs
+func (s *IssueService) resolveStateIDs(stateNames []string, teamID string) ([]string, error) {
+	resolved := make([]string, 0, len(stateNames))
+	for _, name := range stateNames {
+		id, err := s.resolveStateID(name, teamID)
+		if err != nil {
+			return nil, err
+		}
+		resolved = append(resolved, id)
+	}
+	return resolved, nil
+}
+
+// resolveLabelIDs resolves a list of label names to label IDs
+func (s *IssueService) resolveLabelIDs(labelNames []string, teamID string) ([]string, error) {
+	resolved := make([]string, 0, len(labelNames))
+	for _, name := range labelNames {
+		id, err := s.client.ResolveLabelIdentifier(name, teamID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve label '%s': %w", name, err)
+		}
+		resolved = append(resolved, id)
+	}
+	return resolved, nil
 }

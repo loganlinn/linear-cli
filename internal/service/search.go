@@ -111,9 +111,31 @@ func (s *SearchService) searchIssues(opts *SearchOptions) (string, error) {
 		filters.CycleID = cycleID
 	}
 
+	// Resolve state names to IDs (requires team)
+	if len(opts.StateIDs) > 0 {
+		if filters.TeamID == "" {
+			return "", fmt.Errorf("--team is required when filtering by state")
+		}
+		resolvedStates, err := s.resolveStateIDs(opts.StateIDs, filters.TeamID)
+		if err != nil {
+			return "", err
+		}
+		filters.StateIDs = resolvedStates
+	}
+
+	// Resolve label names to IDs (requires team)
+	if len(opts.LabelIDs) > 0 {
+		if filters.TeamID == "" {
+			return "", fmt.Errorf("--team is required when filtering by labels")
+		}
+		resolvedLabels, err := s.resolveLabelIDs(opts.LabelIDs, filters.TeamID)
+		if err != nil {
+			return "", err
+		}
+		filters.LabelIDs = resolvedLabels
+	}
+
 	// Copy remaining filters
-	filters.StateIDs = opts.StateIDs
-	filters.LabelIDs = opts.LabelIDs
 	filters.Priority = opts.Priority
 
 	// Execute initial search
@@ -137,6 +159,35 @@ func (s *SearchService) searchIssues(opts *SearchOptions) (string, error) {
 	}
 
 	return s.formatter.IssueList(result.Issues, opts.Format, pagination), nil
+}
+
+// resolveStateIDs resolves a list of state names to state IDs
+func (s *SearchService) resolveStateIDs(stateNames []string, teamID string) ([]string, error) {
+	resolved := make([]string, 0, len(stateNames))
+	for _, name := range stateNames {
+		state, err := s.client.WorkflowClient().GetWorkflowStateByName(teamID, name)
+		if err != nil {
+			return nil, fmt.Errorf("state '%s' not found in team workflow: %w", name, err)
+		}
+		if state == nil {
+			return nil, fmt.Errorf("state '%s' not found in team workflow", name)
+		}
+		resolved = append(resolved, state.ID)
+	}
+	return resolved, nil
+}
+
+// resolveLabelIDs resolves a list of label names to label IDs
+func (s *SearchService) resolveLabelIDs(labelNames []string, teamID string) ([]string, error) {
+	resolved := make([]string, 0, len(labelNames))
+	for _, name := range labelNames {
+		id, err := s.client.ResolveLabelIdentifier(name, teamID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve label '%s': %w", name, err)
+		}
+		resolved = append(resolved, id)
+	}
+	return resolved, nil
 }
 
 // needsDependencyFiltering checks if any dependency filters are set
