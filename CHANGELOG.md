@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.7] - 2026-02-08
+
+### Fixed
+
+**Project Name Resolution in Create/Update (GitHub #4):**
+- Fixed `-P` / `--project` flag failing with "GraphQL Argument Validation Error" on `issues create` and `issues update`
+- Issue: `linear issues create "Title" -P "My Project"` and `linear issues update CEN-123 -P "My Project"` passed the project name as a string to the GraphQL API, which expects a UUID
+- Root cause: `Create` and `Update` methods passed the project value directly without resolving names to UUIDs (unlike state, labels, and cycles which already resolved correctly)
+- Fix: Added `ResolveProject` resolver that converts project names to UUIDs (case-insensitive, with fuzzy matching fallback)
+- UUIDs are passed through unchanged for backwards compatibility
+- Example: `linear issues create "Fix bug" -P "SCWM Experiments"` now works correctly
+
 ## [1.4.6] - 2026-01-28
 
 ### Fixed

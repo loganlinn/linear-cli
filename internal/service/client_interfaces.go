@@ -29,6 +29,7 @@ type IssueClientOperations interface {
 	ResolveUserIdentifier(nameOrEmail string) (*linear.ResolvedUser, error)
 	ResolveCycleIdentifier(numberOrNameOrID, teamID string) (string, error)
 	ResolveLabelIdentifier(labelName, teamID string) (string, error)
+	ResolveProjectIdentifier(nameOrID string) (string, error)
 
 	// Metadata operations (kept in Phase 2)
 	UpdateIssueMetadataKey(issueID, key string, value interface{}) error
