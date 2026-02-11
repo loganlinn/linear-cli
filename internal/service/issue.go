@@ -30,7 +30,6 @@ type SearchFilters struct {
 	ProjectID  string
 	AssigneeID string
 	CycleID    string
-	ProjectID  string
 	StateIDs   []string
 	LabelIDs   []string
 	Priority   *int
@@ -245,7 +244,7 @@ func (s *IssueService) SearchWithOutput(filters *SearchFilters, verbosity format
 
 	// Resolve project identifier if provided
 	if filters.ProjectID != "" {
-		projectID, err := s.client.ResolveProjectIdentifier(filters.ProjectID)
+		projectID, err := s.client.ResolveProjectIdentifier(filters.ProjectID, linearFilters.TeamID)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve project '%s': %w", filters.ProjectID, err)
 		}
@@ -478,7 +477,7 @@ func (s *IssueService) Create(input *CreateIssueInput) (string, error) {
 		needsUpdate = true
 	}
 	if input.ProjectID != "" {
-		projectID, err := s.client.ResolveProjectIdentifier(input.ProjectID)
+		projectID, err := s.client.ResolveProjectIdentifier(input.ProjectID, teamID)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve project '%s': %w", input.ProjectID, err)
 		}
@@ -615,7 +614,15 @@ func (s *IssueService) Update(identifier string, input *UpdateIssueInput) (strin
 	}
 
 	if input.ProjectID != nil {
-		projectID, err := s.client.ResolveProjectIdentifier(*input.ProjectID)
+		teamKey, _, err := identifiers.ParseIssueIdentifier(issue.Identifier)
+		if err != nil {
+			return "", fmt.Errorf("invalid issue identifier '%s': %w", issue.Identifier, err)
+		}
+		resolvedTeamID, err := s.client.ResolveTeamIdentifier(teamKey)
+		if err != nil {
+			return "", fmt.Errorf("could not resolve team '%s': %w", teamKey, err)
+		}
+		projectID, err := s.client.ResolveProjectIdentifier(*input.ProjectID, resolvedTeamID)
 		if err != nil {
 			return "", fmt.Errorf("failed to resolve project '%s': %w", *input.ProjectID, err)
 		}

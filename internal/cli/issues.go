@@ -43,7 +43,6 @@ func newIssuesListCmd() *cobra.Command {
 		priority   string
 		assignee   string
 		cycle      string
-		project    string
 		labels     string
 		limit      int
 		formatStr  string
@@ -174,7 +173,6 @@ TIP: Use --format full for detailed output, --format minimal for concise output.
 	cmd.Flags().StringVar(&priority, "priority", "", "Filter by priority: 0-4 or none/urgent/high/normal/low")
 	cmd.Flags().StringVarP(&assignee, "assignee", "a", "", "Filter by assignee (email or 'me')")
 	cmd.Flags().StringVarP(&cycle, "cycle", "c", "", "Filter by cycle (number, 'current', or 'next')")
-	cmd.Flags().StringVarP(&project, "project", "P", "", "Filter by project name or ID")
 	cmd.Flags().StringVarP(&labels, "labels", "l", "", "Filter by labels (comma-separated)")
 	cmd.Flags().IntVarP(&limit, "limit", "n", 10, "Number of items (max 250)")
 	cmd.Flags().StringVarP(&formatStr, "format", "f", "compact", "Verbosity level: minimal|compact|full")
