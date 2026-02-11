@@ -57,6 +57,9 @@ func (m *mockIssueClient) ResolveLabelIdentifier(label, team string) (string, er
 func (m *mockIssueClient) ResolveProjectIdentifier(nameOrID, teamID string) (string, error) {
 	return m.resolveProjectResult, m.resolveProjectErr
 }
+func (m *mockIssueClient) CreateRelation(issueID, relatedIssueID string, relationType core.IssueRelationType) error {
+	return nil
+}
 func (m *mockIssueClient) UpdateIssueMetadataKey(id, key string, val interface{}) error {
 	return nil
 }

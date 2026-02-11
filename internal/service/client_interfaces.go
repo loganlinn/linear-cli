@@ -31,6 +31,9 @@ type IssueClientOperations interface {
 	ResolveLabelIdentifier(labelName, teamID string) (string, error)
 	ResolveProjectIdentifier(nameOrID, teamID string) (string, error)
 
+	// Relation operations
+	CreateRelation(issueID, relatedIssueID string, relationType core.IssueRelationType) error
+
 	// Metadata operations (kept in Phase 2)
 	UpdateIssueMetadataKey(issueID, key string, value interface{}) error
 
