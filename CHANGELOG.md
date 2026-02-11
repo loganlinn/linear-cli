@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed silent no-op when `--blocked-by` or `--depends-on` were combined with other flags (e.g. `--labels`)
 - Relations created with these flags are now visible in Linear's UI immediately
 
+**OAuth Token Refresh (GitHub #7):**
+- Fixed OAuth token expiring daily and requiring re-authentication
+- Root cause: `initializeClient()` used a static token provider (`NewClientWithAuthMode`) instead of the existing refresh-capable provider (`NewClientWithTokenPath`)
+- Secondary fix: `NewClientWithTokenPath` now preserves `authMode` on the client struct, maintaining user/agent distinction
+- Tokens are now refreshed automatically (proactive before expiry, reactive on 401)
+- Legacy tokens (no refresh token) and `LINEAR_API_TOKEN` env var continue to work unchanged
+
 ## [1.4.9] - 2026-02-10
 
 ### Added
