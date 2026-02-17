@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-02-16
+
 ### Added
 
 **Attachment Commands (GitHub #36):**
@@ -485,7 +487,8 @@ A token-efficient CLI for Linear.
 - Linux (64-bit)
 - Windows (64-bit)
 
-[Unreleased]: https://github.com/joa23/linear-cli/compare/v1.4.9...HEAD
+[Unreleased]: https://github.com/joa23/linear-cli/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/joa23/linear-cli/compare/v1.4.9...v1.5.0
 [1.4.9]: https://github.com/joa23/linear-cli/compare/v1.4.8...v1.4.9
 [1.4.8]: https://github.com/joa23/linear-cli/compare/v1.4.7...v1.4.8
 [1.4.7]: https://github.com/joa23/linear-cli/compare/v1.4.6...v1.4.7
