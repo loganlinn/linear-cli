@@ -68,6 +68,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed `GetIssueWithParentContext` missing the `project` field — issues with parents showed `project: null`
 - Fixed `GetIssueWithProjectContext` and `GetIssueWithParentContext` missing comments and attachments — data was fetched by `GetIssue` then silently replaced by context variants that lacked these fields
 
+**GetIssue Attachment Shadowing (GitHub #34):**
+- Fixed `GetIssue` response struct shadowing `core.Issue.Attachments` via struct embedding
+- Attachments from Linear UI or integrations (Slack, GitHub PRs, Figma) were fetched but silently discarded
+- All `GetIssueWithBestContext` query paths now use `core.Issue` directly — no shadowing
+
 ## [1.4.9] - 2026-02-10
 
 ### Added
