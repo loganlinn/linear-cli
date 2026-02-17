@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+**Attachment Commands (GitHub #36):**
+- Added `linear attachments list <issue-id>` to list attachment objects on an issue
+- Added `linear attachments create <issue-id>` with `--url` for external links and `--file` for file uploads
+- Added `linear attachments update <id>` to update attachment title/subtitle
+- Added `linear attachments delete <id>` to remove attachments
+- File uploads (`--file`) upload to Linear CDN then create real attachment objects (sidebar cards, not inline markdown)
+- `--file` defaults `--title` to the filename when not specified
+- URL is used as an idempotent key — same URL on same issue updates rather than duplicates
+- Supports `--output json` for automation
+- Help text clarifies distinction between `attachments create` (sidebar cards) and `--attach` (inline image embeds)
+
 **New `--format detailed` Verbosity Level:**
 - Added `detailed` format between `compact` and `full`: `minimal → compact → detailed → full`
 - `detailed` shows truncated comments + a hint to use `linear issues comments <id>` for full text

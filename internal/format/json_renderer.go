@@ -201,6 +201,24 @@ func (r *JSONRenderer) RenderCommentList(comments []core.Comment, verbosity Verb
 	return r.marshal(dtos)
 }
 
+// --- Attachment Rendering ---
+
+func (r *JSONRenderer) RenderAttachment(att *core.Attachment, verbosity Verbosity) string {
+	if att == nil {
+		return r.renderError("Attachment is nil")
+	}
+	dto := AttachmentToDTO(att)
+	return r.marshal(dto)
+}
+
+func (r *JSONRenderer) RenderAttachmentList(atts []core.Attachment, verbosity Verbosity) string {
+	dtos := make([]AttachmentDTO, len(atts))
+	for i, att := range atts {
+		dtos[i] = AttachmentToDTO(&att)
+	}
+	return r.marshal(dtos)
+}
+
 // --- Helper methods ---
 
 // marshal converts an object to pretty-printed JSON

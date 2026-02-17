@@ -214,7 +214,9 @@ type AttachmentDTO struct {
 	ID         string `json:"id"`
 	Title      string `json:"title"`
 	URL        string `json:"url"`
+	Subtitle   string `json:"subtitle,omitempty"`
 	SourceType string `json:"sourceType"`
+	CreatedAt  string `json:"createdAt"`
 }
 
 // CommentRefDTO is a minimal comment reference
@@ -357,12 +359,7 @@ func populateIssueBase(issue *core.Issue) issueBaseFields {
 	if issue.Attachments != nil && len(issue.Attachments.Nodes) > 0 {
 		base.Attachments = make([]AttachmentDTO, len(issue.Attachments.Nodes))
 		for i, att := range issue.Attachments.Nodes {
-			base.Attachments[i] = AttachmentDTO{
-				ID:         att.ID,
-				Title:      att.Title,
-				URL:        att.URL,
-				SourceType: att.SourceType,
-			}
+			base.Attachments[i] = AttachmentToDTO(&att)
 		}
 	}
 
@@ -546,6 +543,18 @@ func UserToDTO(user *core.User) UserDTO {
 	}
 
 	return dto
+}
+
+// AttachmentToDTO converts an attachment to DTO
+func AttachmentToDTO(att *core.Attachment) AttachmentDTO {
+	return AttachmentDTO{
+		ID:         att.ID,
+		Title:      att.Title,
+		URL:        att.URL,
+		Subtitle:   att.Subtitle,
+		SourceType: att.SourceType,
+		CreatedAt:  att.CreatedAt,
+	}
 }
 
 // CommentToDTO converts a comment to DTO
