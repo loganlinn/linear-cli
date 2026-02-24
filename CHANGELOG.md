@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-02-24
+
+### Added
+
+**Private Attachment Downloads (#40):**
+- Added `attachments download` command for private `uploads.linear.app` URLs
+- Auth header support for authenticated download of private uploads
+- Added `attachments get` alias for usability
+- Help hints for downloading private image URLs from issue descriptions
+
+**Standardized API Key Auth (#41):**
+- Standardized env-based auth on `LINEAR_API_KEY` as the single canonical env var
+- Removed runtime fallback to deprecated `LINEAR_API_TOKEN`
+- Correct auth header behavior: `lin_api_*` keys sent without `Bearer`, OAuth tokens with `Bearer`
+- Updated CLI auth/init/onboard/status messaging to reference `LINEAR_API_KEY`
+
+### Fixed
+
+**Atomic Issue Creation (#38):**
+- Issue creation is now a single atomic `issueCreate` mutation instead of create-then-update
+- Prevents orphaned issues when optional fields (labels, state, assignee, etc.) fail validation
+- Automated callers that retry on failure no longer produce duplicates
+
 ## [1.5.0] - 2026-02-16
 
 ### Added
@@ -487,7 +510,8 @@ A token-efficient CLI for Linear.
 - Linux (64-bit)
 - Windows (64-bit)
 
-[Unreleased]: https://github.com/joa23/linear-cli/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/joa23/linear-cli/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/joa23/linear-cli/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/joa23/linear-cli/compare/v1.4.9...v1.5.0
 [1.4.9]: https://github.com/joa23/linear-cli/compare/v1.4.8...v1.4.9
 [1.4.8]: https://github.com/joa23/linear-cli/compare/v1.4.7...v1.4.8
