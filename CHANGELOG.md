@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `--related-to` and `--duplicate-of` flags for `issues create`/`update` — link related issues and mark duplicates, complementing the existing `--blocked-by`/`--depends-on` (blocks) relations. Both accept comma-separated issue IDs.
+
 ## [1.9.0] - 2026-05-21
 
 ### Added

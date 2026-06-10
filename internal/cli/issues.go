@@ -294,6 +294,8 @@ func newIssuesCreateCmd() *cobra.Command {
 		parent      string
 		dependsOn   string
 		blockedBy   string
+		relatedTo   string
+		duplicateOf string
 		attachFiles []string
 	)
 
@@ -325,6 +327,8 @@ TIP: Run 'linear init' first to set default team.`,
     --labels "backend,security" \
     --blocked-by CEN-99 \
     --depends-on CEN-98,CEN-97 \
+    --related-to CEN-50 \
+    --duplicate-of CEN-49 \
     --due 2026-02-15 \
     --attach /tmp/diagram.png \
     --description "Full OAuth implementation with Google provider"
@@ -429,6 +433,12 @@ TIP: Run 'linear init' first to set default team.`,
 			if blockedBy != "" {
 				input.BlockedBy = parseCommaSeparated(blockedBy)
 			}
+			if relatedTo != "" {
+				input.RelatedTo = parseCommaSeparated(relatedTo)
+			}
+			if duplicateOf != "" {
+				input.DuplicateOf = parseCommaSeparated(duplicateOf)
+			}
 
 			output, err := deps.Issues.Create(input)
 			if err != nil {
@@ -454,6 +464,8 @@ TIP: Run 'linear init' first to set default team.`,
 	cmd.Flags().StringVar(&parent, "parent", "", "Parent issue ID (for sub-issues)")
 	cmd.Flags().StringVar(&dependsOn, "depends-on", "", "Comma-separated issue IDs this depends on")
 	cmd.Flags().StringVar(&blockedBy, "blocked-by", "", "Comma-separated issue IDs blocking this")
+	cmd.Flags().StringVar(&relatedTo, "related-to", "", "Comma-separated issue IDs related to this")
+	cmd.Flags().StringVar(&duplicateOf, "duplicate-of", "", "Comma-separated issue IDs this is a duplicate of")
 	cmd.Flags().StringArrayVar(&attachFiles, "attach", nil, "Embed file as inline image in body (repeatable); for sidebar cards use: attachments create")
 
 	return cmd
@@ -477,6 +489,8 @@ func newIssuesUpdateCmd() *cobra.Command {
 		parent       string
 		dependsOn    string
 		blockedBy    string
+		relatedTo    string
+		duplicateOf  string
 		attachFiles  []string
 	)
 
@@ -535,6 +549,7 @@ LABEL MODES:
 				addLabels != "" || removeLabels != "" ||
 				cycle != "" || project != "" || assignee != "" ||
 				dueDate != "" || parent != "" || dependsOn != "" || blockedBy != "" ||
+				relatedTo != "" || duplicateOf != "" ||
 				len(attachFiles) > 0
 
 			if !hasFlags {
@@ -619,6 +634,12 @@ LABEL MODES:
 			if blockedBy != "" {
 				input.BlockedBy = parseCommaSeparated(blockedBy)
 			}
+			if relatedTo != "" {
+				input.RelatedTo = parseCommaSeparated(relatedTo)
+			}
+			if duplicateOf != "" {
+				input.DuplicateOf = parseCommaSeparated(duplicateOf)
+			}
 			if team != "" {
 				input.TeamID = &team
 			}
@@ -649,6 +670,8 @@ LABEL MODES:
 	cmd.Flags().StringVar(&parent, "parent", "", "Update parent issue")
 	cmd.Flags().StringVar(&dependsOn, "depends-on", "", "Update dependencies (comma-separated issue IDs)")
 	cmd.Flags().StringVar(&blockedBy, "blocked-by", "", "Update blocked-by (comma-separated issue IDs)")
+	cmd.Flags().StringVar(&relatedTo, "related-to", "", "Mark as related to (comma-separated issue IDs)")
+	cmd.Flags().StringVar(&duplicateOf, "duplicate-of", "", "Mark as duplicate of (comma-separated issue IDs)")
 	cmd.Flags().StringArrayVar(&attachFiles, "attach", nil, "Embed file as inline image in body (repeatable); for sidebar cards use: attachments create")
 	cmd.Flags().StringVarP(&team, "team", "t", "", TeamFlagDescription)
 

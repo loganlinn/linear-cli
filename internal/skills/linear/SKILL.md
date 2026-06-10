@@ -214,6 +214,8 @@ linear i create "Add OAuth integration" \
   --parent CEN-100 \
   --depends-on CEN-99 \
   --blocked-by CEN-98 \
+  --related-to CEN-50 \
+  --duplicate-of CEN-49 \
   --labels backend,security \
   --estimate 5 \
   --cycle 65 \
@@ -384,6 +386,8 @@ linear i list --creator me --team CEN
 - `--parent <ID>` - Parent issue
 - `--depends-on <IDs>` - Comma-separated dependencies
 - `--blocked-by <IDs>` - Comma-separated blockers
+- `--related-to <IDs>` - Comma-separated related issues
+- `--duplicate-of <IDs>` - Comma-separated issues this duplicates
 - `--due <date>` - Due date (YYYY-MM-DD)
 - `--attach <file>` - Attach file
 

@@ -452,6 +452,8 @@ type CreateIssueInput struct {
 	LabelIDs    []string
 	DependsOn   []string // Issue identifiers this issue depends on (stored in metadata)
 	BlockedBy   []string // Issue identifiers that block this issue (stored in metadata)
+	RelatedTo   []string // Issue identifiers marked as related to this issue
+	DuplicateOf []string // Issue identifiers this issue is a duplicate of
 }
 
 // Create creates a new issue
@@ -550,6 +552,22 @@ func (s *IssueService) Create(input *CreateIssueInput) (string, error) {
 			}
 		}
 	}
+	if len(input.RelatedTo) > 0 {
+		for _, relID := range input.RelatedTo {
+			// related is symmetric — direction is irrelevant
+			if err := s.client.CreateRelation(issue.Identifier, relID, core.RelationRelated); err != nil {
+				return "", fmt.Errorf("failed to create related-to relation for %s: %w", relID, err)
+			}
+		}
+	}
+	if len(input.DuplicateOf) > 0 {
+		for _, dupID := range input.DuplicateOf {
+			// the new issue is a duplicate of dupID
+			if err := s.client.CreateRelation(issue.Identifier, dupID, core.RelationDuplicate); err != nil {
+				return "", fmt.Errorf("failed to create duplicate-of relation for %s: %w", dupID, err)
+			}
+		}
+	}
 
 	return s.formatter.Issue(issue, format.Full), nil
 }
@@ -572,6 +590,8 @@ type UpdateIssueInput struct {
 	RemoveLabelIDs []string // Subtractive mode: labels to remove (names, resolved later)
 	DependsOn      []string // Issue identifiers this issue depends on (stored in metadata)
 	BlockedBy      []string // Issue identifiers that block this issue (stored in metadata)
+	RelatedTo      []string // Issue identifiers marked as related to this issue
+	DuplicateOf    []string // Issue identifiers this issue is a duplicate of
 }
 
 // Update updates an existing issue
@@ -782,6 +802,22 @@ func (s *IssueService) Update(identifier string, input *UpdateIssueInput) (strin
 			// blockerID blocks this issue
 			if err := s.client.CreateRelation(blockerID, issue.Identifier, core.RelationBlocks); err != nil {
 				return "", fmt.Errorf("failed to create blocked-by relation for %s: %w", blockerID, err)
+			}
+		}
+	}
+	if len(input.RelatedTo) > 0 {
+		for _, relID := range input.RelatedTo {
+			// related is symmetric — direction is irrelevant
+			if err := s.client.CreateRelation(issue.Identifier, relID, core.RelationRelated); err != nil {
+				return "", fmt.Errorf("failed to create related-to relation for %s: %w", relID, err)
+			}
+		}
+	}
+	if len(input.DuplicateOf) > 0 {
+		for _, dupID := range input.DuplicateOf {
+			// this issue is a duplicate of dupID
+			if err := s.client.CreateRelation(issue.Identifier, dupID, core.RelationDuplicate); err != nil {
+				return "", fmt.Errorf("failed to create duplicate-of relation for %s: %w", dupID, err)
 			}
 		}
 	}

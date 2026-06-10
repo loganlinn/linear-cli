@@ -512,7 +512,9 @@ linear issues create "Add Google OAuth provider" \
   --team ENG \
   --parent ENG-100 \
   --blocked-by ENG-99 \
-  --depends-on ENG-98,ENG-97
+  --depends-on ENG-98,ENG-97 \
+  --related-to ENG-50 \
+  --duplicate-of ENG-49
 
 # Update multiple fields at once
 linear issues update ENG-123 \
@@ -526,6 +528,10 @@ linear issues update ENG-123 \
 # Manage dependencies
 linear issues update ENG-102 --blocked-by ENG-101
 linear issues update ENG-103 --depends-on ENG-100,ENG-101
+
+# Link related issues / mark duplicates
+linear issues update ENG-104 --related-to ENG-100,ENG-101
+linear issues update ENG-105 --duplicate-of ENG-104
 
 # File attachments
 linear issues create "UI Bug" --team ENG --attach /tmp/screenshot.png

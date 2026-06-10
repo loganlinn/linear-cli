@@ -167,6 +167,10 @@ linear issues create "Implement feature" \
   --estimate 5 \
   --cycle 65 \
   --labels "backend,security"
+
+# Link relations (comma-separated IDs)
+linear issues update CEN-123 --blocked-by CEN-99 --depends-on CEN-98
+linear issues update CEN-123 --related-to CEN-50 --duplicate-of CEN-49
 ```
 
 #### Working with Team Context

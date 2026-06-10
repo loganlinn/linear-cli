@@ -269,6 +269,101 @@ func TestIssueService_Update_BothDependsOnAndBlockedBy(t *testing.T) {
 	}
 }
 
+func TestIssueService_Update_RelatedToOnly_SkipsUpdateIssue(t *testing.T) {
+	mock := &mockIssueClientForRelation{}
+	svc := NewIssueService(mock, format.New())
+
+	_, err := svc.Update("TEST-1", &UpdateIssueInput{
+		RelatedTo: []string{"TEST-170"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if mock.updateIssueCalls != 0 {
+		t.Errorf("UpdateIssue called %d times, want 0 (should skip when only relations)", mock.updateIssueCalls)
+	}
+	if len(mock.relationCalls) != 1 {
+		t.Fatalf("CreateRelation called %d times, want 1", len(mock.relationCalls))
+	}
+	call := mock.relationCalls[0]
+	// related is symmetric: this issue is the subject
+	if call.issueID != "TEST-1" {
+		t.Errorf("issueID = %q, want %q", call.issueID, "TEST-1")
+	}
+	if call.relatedIssueID != "TEST-170" {
+		t.Errorf("relatedIssueID = %q, want %q", call.relatedIssueID, "TEST-170")
+	}
+	if call.relationType != core.RelationRelated {
+		t.Errorf("relationType = %q, want %q", call.relationType, core.RelationRelated)
+	}
+}
+
+func TestIssueService_Update_DuplicateOfOnly_SkipsUpdateIssue(t *testing.T) {
+	mock := &mockIssueClientForRelation{}
+	svc := NewIssueService(mock, format.New())
+
+	_, err := svc.Update("TEST-1", &UpdateIssueInput{
+		DuplicateOf: []string{"TEST-50"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if mock.updateIssueCalls != 0 {
+		t.Errorf("UpdateIssue called %d times, want 0 (should skip when only relations)", mock.updateIssueCalls)
+	}
+	if len(mock.relationCalls) != 1 {
+		t.Fatalf("CreateRelation called %d times, want 1", len(mock.relationCalls))
+	}
+	call := mock.relationCalls[0]
+	// this issue is the duplicate; TEST-50 is the canonical original
+	if call.issueID != "TEST-1" {
+		t.Errorf("issueID = %q, want %q (this issue should be the duplicate)", call.issueID, "TEST-1")
+	}
+	if call.relatedIssueID != "TEST-50" {
+		t.Errorf("relatedIssueID = %q, want %q (canonical original)", call.relatedIssueID, "TEST-50")
+	}
+	if call.relationType != core.RelationDuplicate {
+		t.Errorf("relationType = %q, want %q", call.relationType, core.RelationDuplicate)
+	}
+}
+
+func TestIssueService_Create_RelatedToAndDuplicateOf_CreatesRelations(t *testing.T) {
+	mock := &mockIssueClientForRelation{}
+	svc := NewIssueService(mock, format.New())
+
+	_, err := svc.Create(&CreateIssueInput{
+		Title:       "New issue",
+		TeamID:      "TEST",
+		RelatedTo:   []string{"TEST-50"},
+		DuplicateOf: []string{"TEST-60"},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(mock.relationCalls) != 2 {
+		t.Fatalf("CreateRelation called %d times, want 2", len(mock.relationCalls))
+	}
+	// related-to: new issue (TEST-99) related to TEST-50
+	related := mock.relationCalls[0]
+	if related.issueID != "TEST-99" || related.relatedIssueID != "TEST-50" {
+		t.Errorf("related call = (%q, %q), want (%q, %q)", related.issueID, related.relatedIssueID, "TEST-99", "TEST-50")
+	}
+	if related.relationType != core.RelationRelated {
+		t.Errorf("related relationType = %q, want %q", related.relationType, core.RelationRelated)
+	}
+	// duplicate-of: new issue (TEST-99) is a duplicate of TEST-60
+	dup := mock.relationCalls[1]
+	if dup.issueID != "TEST-99" || dup.relatedIssueID != "TEST-60" {
+		t.Errorf("duplicate call = (%q, %q), want (%q, %q)", dup.issueID, dup.relatedIssueID, "TEST-99", "TEST-60")
+	}
+	if dup.relationType != core.RelationDuplicate {
+		t.Errorf("duplicate relationType = %q, want %q", dup.relationType, core.RelationDuplicate)
+	}
+}
+
 func TestHasServiceFieldsToUpdate(t *testing.T) {
 	tests := []struct {
 		name   string
